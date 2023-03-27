@@ -25,7 +25,7 @@ class productModel {
     }
 
     get_product_less(number) {
-        return knex('product').where({ 'p.is_active': 1 }).andWhere('product_qty', '<=', number)
+        return knex('product as p').where({ 'p.is_active': 1 }).andWhere('p.product_qty', '<=', number)
             .leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
             .leftOuterJoin('unit as u', 'p.unit_id', '=', 'u.unit_id')
     }

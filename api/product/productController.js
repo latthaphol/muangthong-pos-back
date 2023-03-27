@@ -84,13 +84,13 @@ class productController {
             // {"active", "delete", "almost", "oos"}
             let result = []
             if (type == "delete") {
-                result = await model.get_product(0)
+                result = (await model.get_product(0)).filter(e => e.product_qty > 0)
             } else if (type == "almost") {
-                result = await model.get_product_less(50)
+                result = (await model.get_product_less(50)).filter(e => e.product_qty > 0)
             } else if (type == "oos") {
                 result = await model.get_product_less(0)
             } else {
-                result = await model.get_product(1)
+                result = (await model.get_product(1)).filter(e => e.product_qty > 0)
             }
             success(res, result, "Product list")
         } catch (error) {
