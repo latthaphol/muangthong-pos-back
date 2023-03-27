@@ -2,13 +2,13 @@ const knex = require('../../config/database')
 
 class authModel {
 
-    login(username) {
-        return knex('user as u').where('u.username', username)
+    login(user_id) {
+        return knex('user as u').where('u.user_id', user_id)
     }
 
-    // register(data) {
-    //     return knex('user').insert(data)
-    // }
+    register(data) {
+        return knex('user').insert(data)
+    }
 
 }
 

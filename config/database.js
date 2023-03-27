@@ -1,10 +1,11 @@
 const options = {
     client: 'mysql',
     connection: {
-        host: '127.0.0.1',
+        host: '203.159.95.98',
         user: 'root',
-        password: 'fatcat-db',
-        database: 'fatcat'
+        password: 'i2C!n24h',
+        database: 'pos_app',
+        port: 3311
     }
 }
 

@@ -4,7 +4,7 @@
  * @param {*} result 
  * @param {Number} code 
  */
-const _success = (res, result, code) => res.status(code || 200).json({ success: true, result })
+const _success = (res, result, message, code) => res.status(code || 200).json({ success: true, message, result })
 
 /**
  * failed response
