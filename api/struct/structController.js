@@ -53,6 +53,35 @@ class structController {
             failed(res, 'Internal Server Error')
         }
     }
+    async soft_delete_unit(req, res) {
+        try {
+            const { unit_id } = req.body;
+            if (!unit_id) {
+                failed(res, 'Unit ID is missing.');
+            } else {
+                await model.soft_delete_unit(unit_id);
+                success(res, null, 'Unit soft deleted.');
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+
+    async soft_delete_product_type(req, res) {
+        try {
+            const { product_type_id } = req.body;
+            if (!product_type_id) {
+                failed(res, 'Product Type ID is missing.');
+            } else {
+                await model.soft_delete_product_type(product_type_id);
+                success(res, null, 'Product Type soft deleted.');
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
 }
 
 module.exports = new structController() 

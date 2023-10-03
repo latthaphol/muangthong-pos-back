@@ -18,18 +18,65 @@ class productModel {
         return knex('product').update({ is_active }).where({ product_id })
     }
 
+    // get_product(is_active) {
+    //     return knex('product as p').where({ 'p.is_active': is_active })
+    //         .leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
+    //        // .leftOuterJoin('product as u', 'p.is_active', '=', 'u.is_active')
+    // }
     get_product(is_active) {
-        return knex('product as p').where({ 'p.is_active': is_active })
-            .leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
-            .leftOuterJoin('unit as u', 'p.unit_id', '=', 'u.unit_id')
+        return knex('product as p')
+            .select('p.product_id', 'p.product_name', 'p.product_detail', 'p.product_cost', 'p.product_price', 'p.product_qty', 'p.product_image', 'p.product_type_id', 'p.unit_id', 'p.is_active', 'pt.product_type')
+            .where({ 'p.is_active': is_active })
+            .orWhere({ 'p.is_active': 0 })
+            .leftJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
+            .andWhere(function () {
+                this.where('pt.product_type_id', '=', knex.raw('(SELECT pt2.product_type_id FROM product_type pt2 WHERE pt2.product_type_id = p.product_type_id ORDER BY pt2.product_type_id DESC LIMIT 1)'));
+            })
+            .orderBy('p.product_id', 'asc'); // Order by product_id in ascending order
     }
+
+
+
 
     get_product_less(number) {
         return knex('product as p').where({ 'p.is_active': 1 }).andWhere('p.product_qty', '<=', number)
-            .leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
-            .leftOuterJoin('unit as u', 'p.unit_id', '=', 'u.unit_id')
+        //.leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
+        // .leftOuterJoin('unit as u', 'p.unit_id', '=', 'u.unit_id')
     }
 
+    filter_product(status) {
+        let query = knex('product as p')
+        //.leftOuterJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
+        // .leftOuterJoin('unit as u', 'p.unit_id', '=', 'u.unit_id');
+
+        if (status === 'almost_out_of_stock') {
+            query = query.where('p.product_qty', '<=', 50).andWhere('p.product_qty', '>', 0);
+        } else if (status === 'ready_to_sell') {
+            query = query.where('p.product_qty', '>', 0);
+        } else if (status === 'out_of_stock') {
+            query = query.where('p.product_qty', 0);
+        }
+
+        return query;
+    }
+
+    soft_delete_product(product_id) {
+        return knex('product').update({ is_active: false }).where({ product_id });
+    }
+
+    update_product_qty(product_id, new_qty) {
+        return knex('product').update({ product_qty: new_qty }).where({ product_id });
+    }
+    add_order(data) {
+        return knex('order').insert(data);
+    }
+
+    add_order_product(data) {
+        return knex('order_products').insert(data);
+    }
 }
 
 module.exports = new productModel()
+
+
+

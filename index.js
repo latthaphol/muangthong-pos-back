@@ -18,7 +18,7 @@ const version = "/api/v1";
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
-
+app.use(cors());
 // path file
 app.use('/static', express.static(__dirname + '/static'));
 
@@ -41,9 +41,6 @@ app.use(sessions({
 app.use(cookieParser());
 
 var corsOptions = {
-    origin: function (origin, callback) {
-        callback(null, true);
-    },
     optionsSuccessStatus: 200,
     preflightContinue: true,
     credentials: true,

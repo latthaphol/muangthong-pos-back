@@ -1,11 +1,11 @@
 const options = {
     client: 'mysql',
     connection: {
-        host: '203.159.95.98',
+        host: 'localhost',
         user: 'root',
-        password: 'i2C!n24h',
+        password: '',
         database: 'pos_app',
-        port: 3311
+        port: 3306
     }
 }
 
