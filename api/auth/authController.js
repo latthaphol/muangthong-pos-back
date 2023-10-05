@@ -74,7 +74,7 @@ class authController {
 
   async register(req, res) {
     try {
-      const fields = ["user_username", "user_password"];
+      const fields = ["user_username", "user_password","user_name_surname"];
       let { object, missing } = await check_field(req, fields, {});
 
       if (missing.length > 0) {
@@ -99,6 +99,7 @@ class authController {
     }
   }
 
+  
   async register_member(req, res) {
     try {
       const fields = [
