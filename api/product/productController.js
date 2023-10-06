@@ -210,22 +210,42 @@ class productController {
 
     async confirm_order(req, res) {
         try {
-            const { selectedProducts } = req.body;
-            let totalAmount = 0;
-            for (const product of selectedProducts) {
-                totalAmount += product.quantity * product.unit_price;
+            const {
+                totalAmount,
+                selectedProducts,
+                selectedMember,
+                selectedPromotionId,
+                point,
+                discountAmount,
+                discountedTotalAmount,
+            } = req.body;
+    
+ 
+            if (!totalAmount || !selectedProducts || !point) {
+                return failed(res, "Invalid input data");
             }
-
+    
+            // ถ้า selectedMember เป็น null ให้ใช้ค่าเริ่มต้นเท่ากับ 0 (หรือค่าอื่นที่เหมาะสม)
+            const memberId = selectedMember || null;
+    
+            // ถ้า selectedPromotionId เป็น null ให้ใช้ค่าเริ่มต้นเท่ากับ 0 (หรือค่าอื่นที่เหมาะสม)
+            const promotionId = selectedPromotionId || null;
+ 
             const newOrder = await model.add_order({
                 total_amount: totalAmount,
-                is_active: 1,
+                member_id: memberId,
+                promotion_id: promotionId,
+                point: point,
+                discountAmount: discountAmount,
+                discountedTotalAmount: discountedTotalAmount,
             });
-
+    
+            // วนลูปเพื่อปรับปรุงสต็อกสินค้าและเพิ่มรายการสั่งซื้อสินค้า
             for (const product of selectedProducts) {
                 const newProductQty = product.product_qty - product.quantity;
-
+    
                 await model.update_product_qty(product.product_id, newProductQty);
-
+    
                 await model.add_order_product({
                     order_id: newOrder[0],
                     product_id: product.product_id,
@@ -233,14 +253,17 @@ class productController {
                     unit_price: product.unit_price,
                 });
             }
-
+    
             success(res, newOrder, "Order confirmed successfully!");
         } catch (error) {
             console.error(error);
             failed(res, "Error confirming order");
         }
     }
-
+    
+    
+    
+    
 
 
 
