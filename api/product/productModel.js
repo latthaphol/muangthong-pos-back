@@ -74,6 +74,14 @@ class productModel {
     add_order_product(data) {
         return knex('order_products').insert(data);
     }
+    get_member(memberId) {
+        return knex('member')
+            .select('member_id', 'member_fname', 'member_lname', 'member_email', 'point', 'is_active', 'member_address', 'member_phone')
+            .where({ member_id: memberId })
+            .first();
+    }
+    
+    
 }
 
 module.exports = new productModel()
