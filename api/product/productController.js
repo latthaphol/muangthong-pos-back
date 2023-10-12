@@ -95,6 +95,7 @@ class productController {
             failed(res, 'Internal Server Error')
         }
     }
+    
     // async update_product(req, res) {
     //     try {
     //         const { product_id } = req.body
