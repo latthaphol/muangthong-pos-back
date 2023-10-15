@@ -22,5 +22,5 @@ router.post('/active_product', controller.active_product);
 router.get('', controller.get_product);
 router.get('/filter-products', controller.filter_product);
 router.post('/confirm_order', controller.confirm_order); 
-
+router.get('/getordetail', controller.getOrderDetails);
 module.exports = router;
