@@ -4,6 +4,7 @@ const { check_field } = require('../../middlewares/utils');
 const { myFs } = require('../..');
 const fs = require('fs').promises; 
 const path = require('path');
+const knex = require('../../config/database')
 class productController {
 
     // async add_product(req, res) {
@@ -262,6 +263,19 @@ class productController {
         }
     }
     
+    
+    async getOrderDetails(req, res) {
+        try {
+            const result = await knex('order')
+                .select('order.order_id', 'order.member_id', 'order.promotion_id', 'order.point', 'order.total_amount', 'order.status', 'order.point_use', 'order.order_date', 'order_products.opid', 'order_products.product_id', 'order_products.itemset_id', 'order_products.status as op_status', 'order_products.quantity', 'order_products.unit_price', 'order_products.cost_price')
+                .innerJoin('order_products', 'order.order_id', 'order_products.order_id');
+    
+            success(res, result, "Order Details");
+        } catch (error) {
+            console.log(error);
+            failed(res, { error: 'Internal Server Error' });
+        }
+    }
     
     
     

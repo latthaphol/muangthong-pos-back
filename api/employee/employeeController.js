@@ -83,13 +83,16 @@ async update_employee(req, res) {
 
 async delete_employee(req, res) {
     try {
-        const { employee_id } = req.params; // รับค่าพารามิเตอร์ employee_id จาก URL
-        const deleteResult = await model.soft_delete_employee(employee_id);
-
-        if (deleteResult) {
-            success(res, { message: "soft delete success" });
+        const { employee_id } = req.body; // Receive the employee_id from URL parameters
+        if (!employee_id) {
+            failed(res, 'Employee ID is missing');
         } else {
-            failed(res, 'Employee not found');
+            const deleteResult = await model.soft_delete_employee(employee_id);
+            if (deleteResult) {
+                success(res, { message: "soft delete success" });
+            } else {
+                failed(res, 'Employee not found');
+            }
         }
     } catch (error) {
         console.log(error);

@@ -121,19 +121,38 @@ async update_member(req, res) {
     // Soft delete an employee
     async delete_member(req, res) {
         try {
-            const { member_id } = req.params; // Assuming you receive member_id
-            const deleteResult = await model.soft_delete_member(member_id);
-    
-            if (deleteResult) {
-                success(res, { message: "Soft delete success" });
-            } else {
-                failed(res, 'Member not found');
+            const { member_id } = req.body; // Assuming you receive member_id
+            if(!member_id){
+                failed(res,'Member ID is missing')
+            }    
+          else {
+               await model.soft_delete_member(member_id);
             }
         } catch (error) {
             console.log(error);
             failed(res, 'Internal Server Error');
         }
     }
+    
+    
+    async softDeletePromotion(req, res) {
+        try {
+            const { promotion_id } = req.body;
+            if (!promotion_id) {
+                failed(res, 'Promotion ID is missing.');
+            } else {
+                await knex('promotion')
+                    .where('promotion_id', promotion_id)
+                    .update({ is_active: 0 });
+
+                success(res, null, 'Promotion soft deleted.');
+            }
+        } catch (error) {
+            console.error('Error soft deleting promotion:', error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+
 }
 
 module.exports = new memberController();

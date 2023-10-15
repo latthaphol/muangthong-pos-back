@@ -81,6 +81,20 @@ class productModel {
             .first();
     }
     
+    getOrderById(order_id) {
+        return knex
+          .select('*')
+          .from('order')
+          .where('order_id', order_id)
+          .first();
+    }
+    
+    getOrderProducts(order_id) {
+        return knex
+          .select('opid', 'order_id', 'product_id', 'itemset_id', 'status', 'quantity', 'unit_price', 'cost_price')
+          .from('order_products')
+          .where('order_id', order_id);
+    }
     
 }
 
