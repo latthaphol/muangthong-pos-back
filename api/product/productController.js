@@ -2,7 +2,7 @@ const model = require('./productModel')
 const { success, failed } = require('../../config/response');
 const { check_field } = require('../../middlewares/utils');
 const { myFs } = require('../..');
-const fs = require('fs').promises; 
+const fs = require('fs').promises;
 const path = require('path');
 const knex = require('../../config/database')
 class productController {
@@ -50,7 +50,7 @@ class productController {
                 const pid = "P" + String(dbRes[0]).padStart(6, '0');
                 if (req.file) {
                     const oldPath = `static/product/${req.file.filename}`;
-                    const newPath = `static/product/${pid}${path.extname(oldPath)}`; 
+                    const newPath = `static/product/${pid}${path.extname(oldPath)}`;
                     object = { product_id: dbRes[0], pid, ...object }
                     fs.rename(oldPath, newPath, function (err) {
                         if (err) throw err;
@@ -96,7 +96,7 @@ class productController {
             failed(res, 'Internal Server Error')
         }
     }
-    
+
     // async update_product(req, res) {
     //     try {
     //         const { product_id } = req.body
@@ -222,17 +222,16 @@ class productController {
                 discountedTotalAmount,
             } = req.body;
     
- 
             if (!totalAmount || !selectedProducts || !point) {
                 return failed(res, "Invalid input data");
             }
     
-            // ถ้า selectedMember เป็น null ให้ใช้ค่าเริ่มต้นเท่ากับ 0 (หรือค่าอื่นที่เหมาะสม)
             const memberId = selectedMember || null;
-    
-            // ถ้า selectedPromotionId เป็น null ให้ใช้ค่าเริ่มต้นเท่ากับ 0 (หรือค่าอื่นที่เหมาะสม)
             const promotionId = selectedPromotionId || null;
- 
+    
+            let successMessage = "Order confirmed successfully";
+            let errorMessage = "Error confirming order";
+    
             const newOrder = await model.add_order({
                 total_amount: totalAmount,
                 member_id: memberId,
@@ -256,29 +255,64 @@ class productController {
                 });
             }
     
-            success(res, newOrder, "Order confirmed successfully!");
+            // อัปเดตค่า "point" ของสมาชิก
+            if (memberId) {
+                const member = await model.get_member(memberId);
+                const currentPoint = member.point || 0;
+                const updatedPoint = currentPoint + point;
+                const updatedMember = await model.update_member_point(memberId, updatedPoint);
+    
+                if (!updatedMember) {
+                    errorMessage = "Failed to update member's point";
+                }
+            }
+    
+            // ลดโปรโมชั่น
+            if (promotionId) {
+                const promotion = await model.get_promotion(promotionId);
+                const currentpromotion = promotion.quota || 0;
+                const updatepromotion = currentpromotion - 1;
+    
+                const updatePromotionSuccess = await model.update_promotion_quota(promotionId, updatepromotion);
+                if (!updatePromotionSuccess) {
+                    errorMessage = "Failed to update promotion quota";
+                }
+            }
+    
+            if (errorMessage === "Error confirming order") {
+                return success(res, newOrder, successMessage);
+            } else {
+                return failed(res, errorMessage);
+            }
         } catch (error) {
             console.error(error);
             failed(res, "Error confirming order");
         }
     }
-    
-    
+
+
+    get_member(memberId) {
+        return knex('member')
+            .where('member_id', memberId)
+            .select('*')
+            .first();
+    }
+
     async getOrderDetails(req, res) {
         try {
             const result = await knex('order')
                 .select('order.order_id', 'order.member_id', 'order.promotion_id', 'order.point', 'order.total_amount', 'order.status', 'order.point_use', 'order.order_date', 'order_products.opid', 'order_products.product_id', 'order_products.itemset_id', 'order_products.status as op_status', 'order_products.quantity', 'order_products.unit_price', 'order_products.cost_price')
                 .innerJoin('order_products', 'order.order_id', 'order_products.order_id');
-    
+
             success(res, result, "Order Details");
         } catch (error) {
             console.log(error);
             failed(res, { error: 'Internal Server Error' });
         }
     }
-    
-    
-    
+
+
+
 
 
 
