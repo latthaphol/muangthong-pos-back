@@ -95,8 +95,26 @@ class productModel {
           .from('order_products')
           .where('order_id', order_id);
     }
-    
+    update_member_point(memberId, newPoint) {
+        return knex('member')
+            .where({ member_id: memberId })
+            .update({ point: newPoint });
+    }
+    get_promotion(promotionId) {
+        return knex('promotion')
+        .where('promotion_id', promotionId)
+                .select('*')
+                .first();
+    }
+    update_promotion_quota(promotionId, updatedQuota)  {
+        return knex('promotion')
+        .where('promotion_id', promotionId)
+        .update({ quota: updatedQuota });
+
+    }
+
 }
+
 
 module.exports = new productModel()
 
