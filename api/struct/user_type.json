@@ -1,0 +1,14 @@
+{
+    "0": {
+        "user_type": "customer",
+        "user_type_id": 0
+    },
+    "1": {
+        "user_type": "staff",
+        "user_type_id": 1
+    },
+    "2": {
+        "user_type": "admin",
+        "user_type_id": 2
+    }
+}

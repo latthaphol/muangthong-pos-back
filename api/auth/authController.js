@@ -4,63 +4,66 @@ const { check_field } = require("../../middlewares/utils");
 const { genToken } = require("../../middlewares/session");
 const { formatMID } = require("../../middlewares/formatter");
 const bcrypt = require("bcrypt");
+const knex = require("../../config/database");
 const saltRounds = 10;
 
 class authController {
   async login(req, res) {
     try {
-      const fields = ["user_username", "user_password"];
-      let {
-        object: { user_username, user_password },
-        missing,
-      } = await check_field(req, fields);
+        const fields = ["user_username", "user_password"];
+        let {
+            object: { user_username, user_password },
+            missing,
+        } = await check_field(req, fields);
 
-      if (missing.length > 0) {
-        failed(res, `Column "${missing}" is missing!`);
-      } else {
-        const result = await model.loginByUsername(user_username);
-
-        if (result.length > 0) {
-          let user = result[0];
-          const isPasswordValid = await bcrypt.compare(
-            user_password,
-            user.user_password
-          ); // Verify the password using bcrypt
-
-          if (!isPasswordValid) {
-            failed(res, "Your password is incorrect!");
-          } else {
-            let user_data = {
-              uid: `UID${user.user_id.toString().padStart(6, "0")}`,
-              user_id: user.user_id,
-              user_username: user["user_username"], // Changed from 'user_email' to 'user_username'
-              user_type: user["user_type"],
-            };
-
-            const memberInfo = await model.getMemberByUserId(user.user_id);
-
-            if (memberInfo) {
-              user_data.member_id = memberInfo.member_id;
-              user_data.member_fname = memberInfo.member_fname;
-              user_data.member_lname = memberInfo.member_lname;
-              user_data.member_email = memberInfo.member_email;
-              user_data.is_active = memberInfo.is_active;
-              user_data.member_address = memberInfo.member_address;
-              user_data.member_phone = memberInfo.member_phone;
-            }
-
-            const token = await genToken(user_data);
-            success(res, { token, ...user_data }, "login success");
-          }
+        if (missing.length > 0) {
+            failed(res, `Column "${missing}" is missing!`);
         } else {
-          failed(res, "ไม่มีผู้ใช้งาน");
+            const result = await model.loginByUsername(user_username);
+
+            if (result.length > 0) {
+                let user = result[0];
+                const isPasswordValid = await bcrypt.compare(
+                    user_password,
+                    user.user_password
+                );
+
+                if (!isPasswordValid) {
+                    failed(res, "Your password is incorrect!");
+                } else {
+                    let user_data = {
+                        uid: `UID${user.user_id.toString().padStart(6, "0")}`,
+                        user_id: user.user_id,
+                        user_username: user["user_username"],
+                        user_type: user["user_type"],
+                    };
+
+                    const memberInfo = await model.getMemberByUserId(user.user_id);
+
+                    if (memberInfo) {
+                        user_data.member_id = memberInfo.member_id;
+                        user_data.member_fname = memberInfo.member_fname;
+                        user_data.member_lname = memberInfo.member_lname;
+                        user_data.member_email = memberInfo.member_email;
+                        user_data.is_active = memberInfo.is_active;
+                        user_data.member_address = memberInfo.member_address;
+                        user_data.member_phone = memberInfo.member_phone;
+                        user_data.point = memberInfo.point; // Include member points
+                    }
+
+                    const token = await genToken(user_data);
+                    success(res, { token, ...user_data }, "login success");
+                }
+            } else {
+                failed(res, "ไม่มีผู้ใช้งาน");
+            }
         }
-      }
     } catch (error) {
-      console.log(error);
-      failed(res, "login fail");
+        console.log(error);
+        failed(res, "login fail");
     }
-  }
+}
+
 
   async logout(req, res) {
     try {
@@ -74,7 +77,7 @@ class authController {
 
   async register(req, res) {
     try {
-      const fields = ["user_username", "user_password","user_name_surname"];
+      const fields = ["user_username", "user_password", "user_name_surname"];
       let { object, missing } = await check_field(req, fields, {});
 
       if (missing.length > 0) {
@@ -99,7 +102,7 @@ class authController {
     }
   }
 
-  
+
   async register_member(req, res) {
     try {
       const fields = [
@@ -167,51 +170,94 @@ class authController {
 
   async updateProfile(req, res) {
     try {
-      const fields = [
-        "member_id",
-        "member_fname",
-        "member_lname",
-        "member_email",
-        "member_address",
-        "member_phone",
-      ];
+        console.log("Data received:", req.body); // ตรวจสอบข้อมูลที่รับมา
+
+        const fields = [
+            "member_id",
+            "member_fname",
+            "member_lname",
+            "member_email",
+            "member_address",
+            "member_phone",
+        ];
+        const { object, missing } = await check_field(req, fields, {});
+
+        if (missing.length > 0) {
+            failed(res, `Column "${missing}" is missing!`);
+        } else {
+            const { member_id, user_password, ...memberData } = object;
+
+            const memberInfo = await model.getMemberByMemberId(member_id);
+
+            if (memberInfo) {
+                console.log("Member Info:", memberInfo);
+
+                const updateResult = await knex.raw('UPDATE member SET ? WHERE user_id = ?', [memberData, memberInfo.user_id]);
+                console.log("Update Result:", updateResult);
+
+                success(res, { message: "Member profile updated successfully." });
+            } else {
+                failed(res, "Member not found");
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        failed(res, "Internal Server Error");
+    }
+}
+
+
+
+
+
+
+  async updateMemberPassword(req, res) {
+    try {
+      const fields = ["member_id", "old_password", "new_password"];
       const { object, missing } = await check_field(req, fields, {});
 
       if (missing.length > 0) {
         failed(res, `Column "${missing}" is missing!`);
       } else {
-        const { member_id, user_password, ...memberData } = object;
+        const { member_id, old_password, new_password } = object;
 
-        // if (user_password) {
-        //     // อัปเดต user_password ในตาราง user
-        //     const hashedPassword = await bcrypt.hash(user_password, saltRounds);
-        //     await model.updateUserPasswordByID(member_id, hashedPassword);
-        // }
+        // Retrieve the member's user_id from the database
+        const member = await model.getMemberById(member_id);
 
-        // ดึงข้อมูลสมาชิกจากตาราง member
-        const memberInfo = await model.getMemberByMemberId(member_id);
+        if (!member) {
+          failed(res, "Member not found");
+        } else {
+          // Retrieve the user's current password from the database
+          const user = await model.getUserById(member.user_id);
 
-        if (memberInfo) {
-          const userData = {
-            user_fname: memberData.member_fname,
-            user_lname: memberData.member_lname,
-            user_email: memberData.member_email,
-          };
+          if (!user) {
+            failed(res, "User not found");
+          } else {
+            // Verify the old password using bcrypt
+            const isOldPasswordValid = await bcrypt.compare(old_password, user.user_password);
 
-          // อัปเดตข้อมูลในตาราง user โดยอิงจาก id ในตาราง member
-          await model.updateUserProfileByID(memberInfo.user_id, userData);
+            if (!isOldPasswordValid) {
+              failed(res, "Your old password is incorrect");
+            } else {
+              // Hash the new password before updating it in the database
+              const hashedNewPassword = await bcrypt.hash(new_password, saltRounds);
+
+              // Update the user's password in the database
+              await model.updateUserPasswordById(member.user_id, hashedNewPassword);
+
+              success(res, { message: "Password updated successfully" });
+            }
+          }
         }
-
-        // อัปเดตข้อมูลสมาชิกในตาราง member
-        await model.updateMemberProfileByID(member_id, memberData);
-
-        success(res, { message: "Member profile updated successfully." });
       }
     } catch (error) {
       console.log(error);
       failed(res, "Internal Server Error");
     }
   }
+
+
+
 }
 
 module.exports = new authController();

@@ -1,6 +1,8 @@
 const model = require('./structModel')
 const { success, failed } = require('../../config/response');
 const { check_field } = require('../../middlewares/utils');
+const fs = require('fs');
+const path = require('path');
 
 class structController {
 
@@ -41,18 +43,49 @@ class structController {
 
     async add_product_type(req, res) {
         try {
-            const { product_type } = req.body
-            if (product_type) {
-                const result = await model.add_product_type({ product_type })
-                success(res, result, "Add product_type success!")
+            const { product_type } = req.body;
+            const { buffer, originalname } = req.file;
+    
+            if (product_type && buffer) {
+                // Resize the image to 100x100 pixels
+                const resizedBuffer = await model.resizeImage(buffer, { width: 100, height: 100 });
+    
+                // Specify the directory path
+                const directoryPath = path.join('static', 'product_type');
+
+    
+                // Create the directory if it doesn't exist
+                if (!fs.existsSync(directoryPath)) {
+                    fs.mkdirSync(directoryPath, { recursive: true });
+                    console.log(`Created directory: ${directoryPath}`);
+                }
+    
+                // Save the resized image to the static/product_type directory with a filename based on the product type
+                const imageName = `product_type_${product_type}${path.extname(originalname)}`;
+                const imagePath = path.join(directoryPath, imageName);
+    
+                // Log the image path for debugging
+                console.log(`Saving image to: ${imagePath}`);
+    
+                fs.writeFileSync(imagePath, resizedBuffer);
+    
+                // Assuming add_product_type method of your model accepts an object with product_type_image property
+                const result = await model.add_product_type({
+                    product_type,
+                    product_type_image: imageName, // Save the filename in the database
+                    image_name: originalname
+                });
+    
+                success(res, result, "Add product_type success!");
             } else {
-                failed(res, 'product_type cannot blank.')
+                failed(res, 'product_type or image cannot be blank.');
             }
         } catch (error) {
-            console.log(error)
-            failed(res, 'Internal Server Error')
+            console.log(error);
+            failed(res, 'Internal Server Error');
         }
     }
+    
     async soft_delete_unit(req, res) {
         try {
             const { unit_id } = req.body;

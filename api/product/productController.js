@@ -7,41 +7,9 @@ const path = require('path');
 const knex = require('../../config/database')
 class productController {
 
-    // async add_product(req, res) {
-    //     try {
-    //       const fields = ["product_name", "product_detail", "product_cost", "product_price", "product_qty", "product_type_id", "unit_id"];
-    //       const product = await check_field(req, fields);
-
-    //       if (product === null) {
-    //         return failed(res, "Missing required fields");
-    //       }
-
-    //       const dbRes = await model.add_product(product);
-    //       const pid = "P" + String(dbRes[0]).padStart(6, '0');
-
-    //       if (req.file) {
-    //         const oldPath = `static/product/${req.file.filename}`;
-    //         const newPath = `static/product/${pid}.jpg`;
-
-    //         product = { ...product, product_id: dbRes[0], pid };
-    //         myFs.rename(oldPath, newPath, function (err) {
-    //           if (err) throw err;
-    //           console.log('File renamed successfully!');
-    //         });
-    //         await model.update_product_img({ product_id: dbRes[0], product_image: newPath });
-    //       }
-
-    //       return success(res, product, "Add product success!");
-    //     } catch (error) {
-    //       console.log(error);
-    //       return failed(res, "Internal Server Error");
-    //     }
-    //   }
-
-
     async add_product(req, res) {
         try {
-            const fields = ["product_name", "product_detail", "product_cost", "product_price", "product_qty", "product_type_id", "unit_id"]
+            const fields = ["product_name", "product_detail",  "product_type_id", "unit_id", "product_length", "product_width",]
             let { object, missing } = await check_field(req, fields)
             if (missing.length > 0) {
                 failed(res, `Column "${missing}" is missing!`)
@@ -57,7 +25,16 @@ class productController {
                         console.log('File renamed successfully!');
                     });
                     await model.update_product_img({ product_id: dbRes[0], product_image: newPath })
+
                 }
+
+                    const productLotAssociationData ={
+                        product_id:dbRes[0],
+                        product_lot_id:req.body.product_lot_id
+                    };
+                // 
+                await model.add_product_lot_association(productLotAssociationData);
+
                 success(res, object, "Add product success!")
             }
         } catch (error) {
@@ -213,6 +190,8 @@ class productController {
     async confirm_order(req, res) {
         try {
             const {
+                totalAmountText, // Assuming you have totalAmountText in the request body
+                cachedTotalAmountText,
                 totalAmount,
                 selectedProducts,
                 selectedMember,
@@ -220,65 +199,70 @@ class productController {
                 point,
                 discountAmount,
                 discountedTotalAmount,
+                product_cost
             } = req.body;
-    
+
             if (!totalAmount || !selectedProducts || !point) {
                 return failed(res, "Invalid input data");
             }
-    
+
             const memberId = selectedMember || null;
             const promotionId = selectedPromotionId || null;
-    
+
             let successMessage = "Order confirmed successfully";
             let errorMessage = "Error confirming order";
-    
+
             const newOrder = await model.add_order({
-                total_amount: totalAmount,
+                total_amount: totalAmountText,
                 member_id: memberId,
                 promotion_id: promotionId,
                 point: point,
                 discountAmount: discountAmount,
                 discountedTotalAmount: discountedTotalAmount,
+                status: 'success',
+
+
             });
-    
+
             // วนลูปเพื่อปรับปรุงสต็อกสินค้าและเพิ่มรายการสั่งซื้อสินค้า
             for (const product of selectedProducts) {
                 const newProductQty = product.product_qty - product.quantity;
-    
-                await model.update_product_qty(product.product_id, newProductQty);
-    
+
+                await model.update_product_qty(product.product_lot_id, newProductQty);
+
                 await model.add_order_product({
                     order_id: newOrder[0],
                     product_id: product.product_id,
                     quantity: product.quantity,
                     unit_price: product.unit_price,
+                    cost_price: product.product_cost, // ใช้ค่า product_cost ที่ได้รับมา
                 });
             }
-    
+
             // อัปเดตค่า "point" ของสมาชิก
             if (memberId) {
                 const member = await model.get_member(memberId);
                 const currentPoint = member.point || 0;
                 const updatedPoint = currentPoint + point;
                 const updatedMember = await model.update_member_point(memberId, updatedPoint);
-    
+
                 if (!updatedMember) {
                     errorMessage = "Failed to update member's point";
                 }
             }
-    
+
             // ลดโปรโมชั่น
             if (promotionId) {
                 const promotion = await model.get_promotion(promotionId);
                 const currentpromotion = promotion.quota || 0;
                 const updatepromotion = currentpromotion - 1;
-    
+
                 const updatePromotionSuccess = await model.update_promotion_quota(promotionId, updatepromotion);
                 if (!updatePromotionSuccess) {
                     errorMessage = "Failed to update promotion quota";
                 }
             }
-    
+
             if (errorMessage === "Error confirming order") {
                 return success(res, newOrder, successMessage);
             } else {
@@ -301,7 +285,7 @@ class productController {
     async getOrderDetails(req, res) {
         try {
             const result = await knex('order')
-                .select('order.order_id', 'order.member_id', 'order.promotion_id', 'order.point', 'order.total_amount', 'order.status', 'order.point_use', 'order.order_date', 'order_products.opid', 'order_products.product_id', 'order_products.itemset_id', 'order_products.status as op_status', 'order_products.quantity', 'order_products.unit_price', 'order_products.cost_price')
+                .select('order.order_id', 'order.total_amount', 'order.status', 'order.point_use', 'order.order_date', 'order_products.product_id', 'order_products.status as op_status', 'order_products.quantity', 'order_products.unit_price', 'order_products.cost_price')
                 .innerJoin('order_products', 'order.order_id', 'order_products.order_id');
 
             success(res, result, "Order Details");
@@ -310,19 +294,138 @@ class productController {
             failed(res, { error: 'Internal Server Error' });
         }
     }
+    async return_product(req, res) {
+        try {
+            const { opid } = req.body;
+    
+            if (!opid) {
+                failed(res, 'Column "opid" is missing!');
+            } else {
+                // Assuming you have a model method for handling return products
+                const returnResult = await model.return_product(opid);
+    
+                if (returnResult) {
+                    success(res, returnResult, 'Return product success!');
+                } else {
+                    failed(res, 'Failed to return product');
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    
+
+    async get_receipt(req, res) {
+        try {
+            const { order_id } = req.params; // การดึงค่า order_id จากพารามิเตอร์ URL
+            if (!order_id) {
+                failed(res, 'Column "order_id" is missing!');
+            } else {
+                const result = await model.get_receipt(order_id);
+                if (result) {
+                    success(res, result, 'Receipt details retrieved successfully!');
+                } else {
+                    failed(res, 'Receipt details not found');
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
 
 
+    // Inside productController.js
 
+    async getorder_product(req, res) {
+        try {
+            const { order_id } = req.params;
+            if (!order_id) {
+                return failed(res, 'Column "order_id" is missing!');
+            }
+    
+            // Use the order_id to fetch order products from the database
+            const orderProducts = await model.get_order_products(order_id);
+    
+            if (orderProducts) {
+                return success(res, orderProducts, 'Order products retrieved successfully!');
+            } else {
+                return failed(res, 'Order products not found');
+            }
+        } catch (error) {
+            console.error(error);
+            return failed(res, 'Internal Server Error');
+        }
+    }
+    async getPurchaseHistoryByMember(req, res) {
+        try {
+            const { memberId } = req.params;
+    
+            if (!memberId) {
+                return failed(res, 'Member ID is missing');
+            }
+    
+            const purchaseHistory = await model.getPurchaseHistoryByMember(memberId);
+    
+            if (purchaseHistory.length > 0) {
+                return success(res, purchaseHistory, 'Purchase history retrieved successfully');
+            } else {
+                return failed(res, 'Purchase history not found for the member');
+            }
+        } catch (error) {
+            console.error(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    async getPurchaseHistoryDetailByOrderID(req, res) {
+        try {
+            const { orderID } = req.params;
+    
+            if (!orderID) {
+                return failed(res, 'Order ID is missing');
+            }
+    
+            const purchaseHistory = await model.getPurchaseHistoryByOrderID(orderID);
+    
+            if (purchaseHistory.length > 0) {
+                return success(res, purchaseHistory, 'Purchase history retrieved successfully');
+            } else {
+                return failed(res, 'Purchase history not found for the order');
+            }
+        } catch (error) {
+            console.error(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    
+    async add_lot(req,res){
+        try {
+            const fields = ["lot_number", "add_date", "product_lot_qty", "product_lot_cost", "product_lot_price"]
+            let { object, missing } = await check_field(req, fields)
+            if (missing.length > 0) {
+                failed(res, `Column "${missing}" is missing!`)
+            } else {
+                const result = await model.add_lot(object)
+    
+                success(res, result, "Add Lot success!")
+            }
+        } catch (error) {
+            console.log(error)
+            failed(res, 'Internal Server Error')
+        }
+     }
 
-
-
+ async get_lot(req, res) {
+    try {
+        const result = await model.get_lot()
+        success(res, result)
+    } catch (error) {
+        console.log(error)
+        failed(res, 'Internal Server Error')
+    }
+}
 
 }
 module.exports = new productController()
-
-
-
-
-
-
-

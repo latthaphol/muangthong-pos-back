@@ -1,4 +1,5 @@
 const knex = require('../../config/database')
+const sharp = require('sharp');
 
 class structModel {
 
@@ -14,15 +15,28 @@ class structModel {
         return knex('product_type').where('is_active', 1)
     }
 
-    add_product_type({ product_type }) {
-        return knex('product_type').insert({ product_type })
+    add_product_type({ product_type, product_type_image }) {
+        return knex('product_type').insert({
+            product_type,
+            product_type_image,
+            is_active: 1,
+        });
     }
+    
     async soft_delete_unit(unitId) {
         await knex('unit').where({ unit_id : unitId}).update({ is_active: 0 });
     }
     
     async soft_delete_product_type(productTypeId) {
         await knex('product_type').where({ product_type_id: productTypeId }).update({ is_active: 0 });
+    }
+    async resizeImage(buffer, options) {
+        return sharp(buffer)
+            .resize(options)
+            .toBuffer();
+    }
+    update_product_img({ product_id, product_type_image }) {
+        return knex('product_type').update({ product_type_image }).where({ product_id })
     }
 }
 

@@ -54,13 +54,15 @@ class authModel {
     //     }
     // }
 
-    async updateUserProfileByID(user_id, data) {
-        try {
-            await knex('user').where('user_id', user_id).update(data);
-        } catch (error) {
-            throw error;
-        }
+    async updateUserProfileByID(userId, userData) {
+        // ให้ใช้ตาราง 'member' แทน 'user'
+        return await knex('member').where({ user_id: userId }).update({
+            member_fname: userData.member_fname,
+            member_lname: userData.member_lname,
+            member_email: userData.member_email,
+        });
     }
+    
 
     async updateUserPasswordByID(user_id, hashedPassword) {
         try {
@@ -72,11 +74,26 @@ class authModel {
 
     async updateMemberProfileByID(member_id, data) {
         try {
-            await knex('member').where('member_id', member_id).update(data);
+            const updatedRows = await knex('member')
+                .where('member_id', member_id)
+                .update(data);
+    
+            if (updatedRows > 0) {
+                console.log('Update Successful! Rows Updated:', updatedRows);
+                return updatedRows;
+            } else {
+                console.error('No rows were updated.');
+                throw new Error('No rows were updated.');
+            }
         } catch (error) {
+            console.error('Update Member Profile Error:', error);
             throw error;
         }
     }
+    
+    
+    
+
     async getMemberByMemberId(member_id) {
         try {
             const members = await knex('member').where('member_id', member_id);
@@ -85,7 +102,32 @@ class authModel {
             throw error;
         }
     }
+
+    //change password
+    async getMemberById(memberId) {
+        try {
+          const members = await knex('member').where('member_id', memberId);
+          return members[0];
+        } catch (error) {
+          throw error;
+        }
+      }
     
+      async getUserById(userId) {
+        try {
+          const users = await knex('user').where('user_id', userId);
+          return users[0];
+        } catch (error) {
+          throw error;
+        }
+      }
+      async updateUserPasswordById(user_id, hashedPassword) {
+        try {
+            await knex('user').where('user_id', user_id).update({ user_password: hashedPassword });
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 
