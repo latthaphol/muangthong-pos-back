@@ -25,6 +25,7 @@ router.post('/confirm_order', controller.confirm_order);
 router.get('/getordetail', controller.getOrderDetails);
 router.post('/return_product', controller.return_product);
 router.get('/get_receipt/:order_id', controller.get_receipt);
+router.get('/get_receiptrefund/:order_id', controller.get_receiptrefund);
 router.get('/get_order_products/:order_id',controller.getorder_product);
 router.get('/getPurchaseHistory/:memberId',controller.getPurchaseHistoryByMember);
 router.get('/getPurchaseHistoryDetail/:orderID', controller.getPurchaseHistoryDetailByOrderID);

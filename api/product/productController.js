@@ -236,6 +236,7 @@ class productController {
                     quantity: product.quantity,
                     unit_price: product.unit_price,
                     cost_price: product.product_cost, // ใช้ค่า product_cost ที่ได้รับมา
+                    status: 'success',
                 });
             }
 
@@ -324,6 +325,24 @@ class productController {
                 failed(res, 'Column "order_id" is missing!');
             } else {
                 const result = await model.get_receipt(order_id);
+                if (result) {
+                    success(res, result, 'Receipt details retrieved successfully!');
+                } else {
+                    failed(res, 'Receipt details not found');
+                }
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    async get_receiptrefund(req, res) {
+        try {
+            const { order_id } = req.params; // การดึงค่า order_id จากพารามิเตอร์ URL
+            if (!order_id) {
+                failed(res, 'Column "order_id" is missing!');
+            } else {
+                const result = await model.get_receiptrefund(order_id);
                 if (result) {
                     success(res, result, 'Receipt details retrieved successfully!');
                 } else {
