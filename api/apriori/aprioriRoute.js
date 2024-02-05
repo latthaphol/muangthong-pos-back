@@ -4,7 +4,6 @@ const aprioriController = require('./aprioriController');
 const router = express.Router();
 
 // Define your Apriori routes
-router.get('/find-frequent-itemsets', aprioriController.findFrequentItemsets);
-router.get('/generate-association-rules', aprioriController.generateAssociationRules);
+router.get('/generate-apriori', aprioriController.apriorigenerate);
 
 module.exports = router;

@@ -150,12 +150,12 @@ class productModel {
             }
     
             // 2. ทำการคืนสินค้า (เพิ่มสินค้ากลับไปยังสต็อกหรือทำตามต้องการ)
-            // Adjust the logic based on your specific requirements
-            // For example, update the product quantity in the 'product' table
+            // อัปเดตคอลัมน์ในตาราง "product_lot" แทนตาราง "product"
             await knex.transaction(async (trx) => {
-                await knex('product')
-                    .where({ product_id: orderProduct.product_id })
-                    .increment('product_qty', orderProduct.quantity)
+                // 2.1 อัปเดตจำนวนในตาราง "product_lot"
+                await knex('product_lot')
+                    .where({ product_lot_id: orderProduct.itemset_id }) // หรือสามารถใช้ product_id แทน
+                    .increment('product_lot_qty', orderProduct.quantity)
                     .transacting(trx);
     
                 // 3. อัปเดตสถานะ order_product เป็น 'refund' หรือตามที่คุณต้องการ
@@ -168,7 +168,7 @@ class productModel {
                 await trx.commit();
             });
     
-            // 5. Return success message
+            // 4. Return success message
             return 'Return product success!';
         } catch (error) {
             console.error('Error returning product:', error);
@@ -202,24 +202,98 @@ class productModel {
                 .leftJoin('product', 'order_products.product_id', 'product.product_id')
                 .leftJoin('member', 'order.member_id', 'member.member_id') // Join with the member table
                 .leftJoin('unit', 'product.unit_id', 'unit.unit_id') // Join with the unit table
-                .where('order.order_id', order_id);
-
+                .where({
+                    'order.order_id': order_id,
+                    'order_products.status': 'success' // Filter by 'success' status
+                });
+    
+            // Check if there are no results with 'success' status
+            if (result.length === 0) {
+                throw new Error('ไม่พอข้อมูลสถานะ');
+            }
+    
+            // Calculate the total amount by summing up the individual amounts for each row
+            let totalAmount = 0;
+            result.forEach((row) => {
+                const unitPrice = parseFloat(row.unit_price) || 0;
+                const quantity = parseInt(row.quantity) || 0;
+                totalAmount += unitPrice * quantity;
+            });
+    
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
-                total_amount: row.total_amount || 0,
+                total_amount: totalAmount,
                 point_use: row.point_use || 0,
                 status: row.status || 0, // Assuming status is part of the result
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
             }));
-
+    
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
         }
     }
+    
     // Inside productModel.js
+    async get_receiptrefund(order_id) {
+        try {
+            const result = await knex('order')
+                .select(
+                    'order.order_id',
+                    'order.total_amount',
+                    'order.point_use',
+                    'order.order_date',
+                    'order_products.product_id',
+                    'order_products.quantity',
+                    'order_products.unit_price',
+                    'order_products.cost_price',
+                    'order.point',
+                    'product.product_name',
+                    'product.product_detail',
+                    'product.product_image',
+                    'member.member_fname',
+                    'member.member_lname',
+                    'unit.unit' // Assuming there is a 'unit' field in the 'unit' table
+                )
+                .leftJoin('order_products', 'order.order_id', 'order_products.order_id')
+                .leftJoin('product', 'order_products.product_id', 'product.product_id')
+                .leftJoin('member', 'order.member_id', 'member.member_id') // Join with the member table
+                .leftJoin('unit', 'product.unit_id', 'unit.unit_id') // Join with the unit table
+                .where({
+                    'order.order_id': order_id,
+                    'order_products.status': 'refund' // Filter by 'success' status
+                });
+    
+            // Check if there are no results with 'success' status
+            if (result.length === 0) {
+                throw new Error('ไม่พอข้อมูลสถานะ');
+            }
+    
+            // Calculate the total amount by summing up the individual amounts for each row
+            let totalAmount = 0;
+            result.forEach((row) => {
+                const unitPrice = parseFloat(row.unit_price) || 0;
+                const quantity = parseInt(row.quantity) || 0;
+                totalAmount += unitPrice * quantity;
+            });
+    
+            // Replace null values with 0 in the result
+            const resultWithDefaultValues = result.map((row) => ({
+                ...row,
+                total_amount: totalAmount,
+                point_use: row.point_use || 0,
+                status: row.status || 0, // Assuming status is part of the result
+                member_fname: row.member_fname || "",
+                member_lname: row.member_lname || "",
+            }));
+    
+            return resultWithDefaultValues;
+        } catch (error) {
+            throw error;
+        }
+    }
 
     getOrderProductsByOrderId(order_id) {
         return knex('order_products')
