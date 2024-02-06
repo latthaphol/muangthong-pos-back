@@ -139,41 +139,50 @@ class productModel {
     }
     async return_product(order_product_id) {
         try {
-            // 1. ดึงข้อมูล order_product จากฐานข้อมูล
+            // Find the order product by ID
             const orderProduct = await knex('order_products')
                 .where({ opid: order_product_id })
-                .first()
-                .forUpdate(); // Lock the selected row for update
+                .first();
     
             if (!orderProduct) {
-                throw new Error('No order product found for the given order product ID');
+                throw new Error('Order product not found');
             }
     
-            // 2. ทำการคืนสินค้า (เพิ่มสินค้ากลับไปยังสต็อกหรือทำตามต้องการ)
-            // อัปเดตคอลัมน์ในตาราง "product_lot" แทนตาราง "product"
-            await knex.transaction(async (trx) => {
-                // 2.1 อัปเดตจำนวนในตาราง "product_lot"
-                await knex('product_lot')
-                    .where({ product_lot_id: orderProduct.itemset_id }) // หรือสามารถใช้ product_id แทน
-                    .increment('product_lot_qty', orderProduct.quantity)
-                    .transacting(trx);
+            // Check if the order product has already been refunded or returned
+            if (orderProduct.status === 'refund' || orderProduct.status === 'returned') {
+                throw new Error('Order product has already been refunded or returned');
+            }
     
-                // 3. อัปเดตสถานะ order_product เป็น 'refund' หรือตามที่คุณต้องการ
-                await knex('order_products')
-                    .update({ status: 'refund' })
-                    .where({ opid: order_product_id })
-                    .transacting(trx);
+            // Calculate the quantity to return (you may have your own logic)
+            const returnedQuantity = orderProduct.quantity;
     
-                // Commit the transaction
-                await trx.commit();
-            });
+            // Update the order product status to 'refund' or 'returned'
+            await knex('order_products')
+                .where({ opid: order_product_id })
+                .update({ status: 'refund' }); // You can also use 'returned' as the status
     
-            // 4. Return success message
-            return 'Return product success!';
+            // Find the corresponding product lot for the same product_id
+            const productLot = await knex('product_lot_association as pla')
+                .select('pl.product_lot_id', 'pl.product_lot_qty')
+                .leftJoin('product_lot as pl', 'pla.product_lot_id', 'pl.product_lot_id')
+                .where({ 'pla.product_id': orderProduct.product_id })
+                .first();
+    
+            if (!productLot) {
+                throw new Error('Product lot not found');
+            }
+    
+            // Update product_lot_qty by adding the returned quantity
+            const newQuantity = productLot.product_lot_qty + returnedQuantity;
+            await knex('product_lot')
+                .where({ product_lot_id: productLot.product_lot_id })
+                .update({ product_lot_qty: newQuantity });
+    
+            // Return a success message or any relevant data
+            return { success: true, message: 'Product returned successfully' };
         } catch (error) {
-            console.error('Error returning product:', error);
-            // Handle errors or rethrow them
-            throw error;
+            console.error(error);
+            throw new Error('Failed to return product');
         }
     }
     
