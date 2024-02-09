@@ -1,14 +1,24 @@
+const knex = require('knex');
+
 const options = {
-    client: 'mysql',
+    client: 'mysql2',
     connection: {
-        host: 'localhost',
-        user: 'root',
-        password: '',
-        database: 'pos_productlot',
-        port: 3306
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
     }
-}
+};
 
-const knex = require('knex')(options);
+const db = knex(options);
 
-module.exports = knex;
+// Test the database connection
+db.raw('SELECT 1+1 as result')
+    .then(() => {
+        console.log('Connected to the database successfully');
+    })
+    .catch(error => {
+        console.error('Error connecting to the database:', error.message);
+    });
+
+module.exports = db;
