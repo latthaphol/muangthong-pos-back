@@ -128,6 +128,25 @@ class authModel {
             throw error;
         }
     }
+    async getUserByUsername(username) {
+        try {
+          const user = await db('user').where('user_username', username).first();
+          return user;
+        } catch (error) {
+          throw error;
+        }
+      }
+      
+      async getUserByEmail(memberEmail) {
+        try {
+            const user = await db('member').where('member_email', memberEmail).first();
+            return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+    
+    
 }
 
 

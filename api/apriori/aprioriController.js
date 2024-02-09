@@ -1,64 +1,84 @@
-// AprioriController.js
-
-const { Apriori } = require('node-apriori');
 const knex = require('../../config/database');
-const { success, failed } = require('../../config/response');
+const AprioriModel = require('./aprioriModel');
 
 class AprioriController {
-    constructor() {
-        this.apriorigenerate = this.apriorigenerate.bind(this);
-        this.mapProductNames = this.mapProductNames.bind(this);
-    }
-
-    async apriorigenerate(req, res) {
+    async calculateItemSupport(req, res) {
         try {
-            // Retrieve Data from the Database
-            const transactionData = await knex('order_products').select(['order_id', 'product_id']);
+            const aprioriModel = new AprioriModel(); // Create an instance of AprioriModel
+            const results = await aprioriModel.calculateItemSupport(); // Call the method on the instance
 
-            // Prepare Transaction Data
-            const transactionsMap = transactionData.reduce((acc, row) => {
-                if (!acc[row.order_id]) {
-                    acc[row.order_id] = [];
-                }
-                acc[row.order_id].push(row.product_id);
-                return acc;
-            }, {});
-            const transactions = Object.values(transactionsMap);
-
-            // Execute the Apriori Algorithm
-            const minSupport = 0.4;
-            const apriori = new Apriori(minSupport);
-            const frequentItemsets = [];
-            apriori.on('data', (itemset) => frequentItemsets.push(itemset));
-            await apriori.exec(transactions);
-
-            // Map product IDs to names
-            const productsWithNames = await this.mapProductNames(frequentItemsets);
-
-            // Send results as a response
-            success(res, { frequentItemsets: productsWithNames });
+            if (results) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Results success',
+                    data: results
+                });
+            } else {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Failed to return product',
+                    data: null
+                });
+            }
         } catch (error) {
-            console.error('Error:', error);
-            failed(res, 'An error occurred.', 500);
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                data: null
+            });
         }
     }
 
-    async mapProductNames(frequentItemsets) {
-        // Retrieve all products from the database
-        const products = await knex('product').select(['product_id', 'product_name']);
-        const productMap = products.reduce((map, product) => {
-            map[product.product_id] = product.product_name;
-            return map;
-        }, {});
+    async calculateconfidenceandlif(req, res) {
+        try {
+            // Get the results from calculateItemSupport
+            const aprioriModel = new AprioriModel(); // Create an instance of AprioriModel
+            const supportResults = await aprioriModel.calculateItemSupport(); // Call the method on the instance
     
-        // Replace product IDs with their names in frequentItemsets
-        return frequentItemsets.map(itemset => {
-            return {
-                ...itemset,
-                items: itemset.items.map(id => ` ${id}, ${productMap[id]}`)
-            };
-        });
+            // Calculate Confidence and Lift for each pair of products from supportResults
+            const resultsWithConfidenceAndLift = supportResults.map(async (result) => {
+                const { Item1, Item2, Support } = result;
+    
+                // Calculate Support for Item1 and Item2
+                const SupportItem1 = await AprioriModel.calculateSupport(Item1);
+                const SupportItem2 = await AprioriModel.calculateSupport(Item2);
+    
+                // Calculate Confidence and Lift
+                const Confidence = Support / SupportItem1;
+                const Lift = Support / (SupportItem1 * SupportItem2);
+    
+                return { Item1, Item2, Support, Confidence, Lift };
+            });
+    
+            // Check if results exist and send response
+            if (resultsWithConfidenceAndLift) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Results success',
+                    data: resultsWithConfidenceAndLift
+                });
+            } else {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Failed to return product',
+                    data: null
+                });
+            }
+    
+        } catch (error) {
+            // Handle any errors that occur
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                data: null
+            });
+        }
     }
+    
+    
+
 }
 
 module.exports = new AprioriController();

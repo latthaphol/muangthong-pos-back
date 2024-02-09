@@ -115,48 +115,63 @@ class authController {
         "member_phone",
       ];
       let { object, missing } = await check_field(req, fields, {});
-
+  
       if (missing.length > 0) {
         failed(res, `Column "${missing}" is missing!`);
       } else {
-        // Encode the user's password using bcrypt
-        const hashedPassword = await bcrypt.hash(
-          object.user_password,
-          saltRounds
-        );
-
-        // Create a new user object with 'user_username' instead of 'user_fname'
-        const newUser = {
-          user_username: object.user_username,
-          user_password: hashedPassword, // Store the hashed password
-          user_type: 2, // Set the default user_type (you can change this as needed)
-        };
-
-        // Add the new user to the "user" table and retrieve the generated user_id
-        const userId = await model.register(newUser);
-
-        // Create a new member object with default values
-        const newMember = {
-          user_id: userId, // Use the generated user_id
-          member_fname: object.member_fname,
-          member_lname: object.member_lname,
-          member_email: object.member_email,
-          point: object.point || 0, // Set the default value to 0 if not provided
-          is_active: 1, // Set the default value to 1
-          member_address: object.member_address || "", // Use a default value if not provided
-          member_phone: object.member_phone || "", // Use a default value if not provided
-        };
-
-        // Add the new member to the "member" table
-        await model.registerMember(newMember);
-
-        success(res, { message: "User and member registered successfully" });
+        // Check if the username already exists in the database
+        const existingUser = await model.getUserByUsername(object.user_username);
+        
+        // Check if the email already exists in the database
+        const existingEmail = await model.getUserByEmail(object.member_email);
+  
+        if (existingUser) {
+          // If the username already exists, return an error message
+          failed(res, "ชื่อผู้ใช้มีอยู่ในระบบแล้ว");
+        } else if (existingEmail) {
+          // If the email already exists, return an error message
+          failed(res, "อีเมลนี้มีอยู่ในระบบแล้ว");
+        } else {
+          // Encode the user's password using bcrypt
+          const hashedPassword = await bcrypt.hash(
+            object.user_password,
+            saltRounds
+          );
+  
+          // Create a new user object with 'user_username' instead of 'user_fname'
+          const newUser = {
+            user_username: object.user_username,
+            user_password: hashedPassword, // Store the hashed password
+            user_type: 2, // Set the default user_type (you can change this as needed)
+          };
+  
+          // Add the new user to the "user" table and retrieve the generated user_id
+          const userId = await model.register(newUser);
+  
+          // Create a new member object with default values
+          const newMember = {
+            user_id: userId, // Use the generated user_id
+            member_fname: object.member_fname,
+            member_lname: object.member_lname,
+            member_email: object.member_email,
+            point: object.point || 0, // Set the default value to 0 if not provided
+            is_active: 1, // Set the default value to 1
+            member_address: object.member_address || "", // Use a default value if not provided
+            member_phone: object.member_phone || "", // Use a default value if not provided
+          };
+  
+          // Add the new member to the "member" table
+          await model.registerMember(newMember);
+  
+          success(res, { message: "User and member registered successfully" });
+        }
       }
     } catch (error) {
       console.log(error);
       failed(res, "Internal Server Error");
     }
   }
+  
 
   async getMembers(req, res) {
     try {
