@@ -289,13 +289,16 @@ class productModel {
                     'order_products.quantity',
                     'order_products.unit_price',
                     'order_products.cost_price',
+                    'order_products.order_product_date',
                     'order.point',
                     'product.product_name',
                     'product.product_detail',
                     'product.product_image',
                     'member.member_fname',
                     'member.member_lname',
-                    'unit.unit' // Assuming there is a 'unit' field in the 'unit' table
+                    'unit.unit',
+
+                     // Assuming there is a 'unit' field in the 'unit' table
                 )
                 .leftJoin('order_products', 'order.order_id', 'order_products.order_id')
                 .leftJoin('product', 'order_products.product_id', 'product.product_id')
@@ -305,12 +308,12 @@ class productModel {
                     'order.order_id': order_id,
                     'order_products.status': 'refund' // Filter by 'success' status
                 });
-
+    
             // Check if there are no results with 'success' status
             if (result.length === 0) {
                 throw new Error('ไม่พอข้อมูลสถานะ');
             }
-
+    
             // Calculate the total amount by summing up the individual amounts for each row
             let totalAmount = 0;
             result.forEach((row) => {
@@ -318,7 +321,7 @@ class productModel {
                 const quantity = parseInt(row.quantity) || 0;
                 totalAmount += unitPrice * quantity;
             });
-
+    
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
@@ -328,7 +331,7 @@ class productModel {
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
             }));
-
+    
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
