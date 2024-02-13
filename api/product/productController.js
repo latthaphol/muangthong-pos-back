@@ -126,7 +126,33 @@ class productController {
     }
 
 
+    async get_product_sales(req, res) {
+        try {
+            const { status } = req.query;
+            let result = [];
 
+            if (status === 'deleted') {
+                result = await model.get_product(0); // ดึงสินค้าที่ถูกลบ
+            } else if (status === 'active') {
+                result = await model.get_product(1); // ดึงสินค้าที่ใช้งาน
+            } else if (status === 'almost') {
+                result = await model.get_product_less(100); // ดึงสินค้าที่ใกล้หมด (เปลี่ยนจาก 50 เป็น 100)
+            } else if (status === 'oos') {
+                result = await model.get_product_less(1); // ดึงสินค้าที่หมด
+            } else {
+                // ค่าเริ่มต้น: ดึงสินค้าที่ใช้งาน
+                result = await model.get_product_sales(1);
+            }
+            //result = result.filter(e => e.is_active > 0); // Filter products with quantity greater than 0
+            //  result = result.filter(e => e.product_qty > 0); // Filter products with quantity greater than 0
+
+            success(res, result, "Product list");
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    
 
     async get_product(req, res) {
         try {
