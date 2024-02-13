@@ -1,10 +1,10 @@
 const options = {
     client: 'mysql',
     connection: {
-        host: 'bcmzjcg2vcphd3fzqmxu-mysql.services.clever-cloud.com',
-        user: 'uyuxekmpn7v3wp1f',
-        password: 'awI0ujrUQiuK63NfDirH',
-        database: 'bcmzjcg2vcphd3fzqmxu',
+        host: 'localhost',
+        user: 'root',
+        password: '',
+        database: 'pos_product',
         port: 3306
     }
 }

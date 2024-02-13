@@ -20,6 +20,8 @@ router.post('/add_product', upload.single("product_image"), controller.add_produ
 router.put('/update_product', upload.single("product_image"), controller.update_product);
 router.post('/active_product', controller.active_product);
 router.get('', controller.get_product);
+router.get('/get_product_sales', controller.get_product_sales);
+
 router.get('/filter-products', controller.filter_product);
 router.post('/confirm_order', controller.confirm_order); 
 router.get('/getordetail', controller.getOrderDetails);

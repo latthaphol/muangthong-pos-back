@@ -14,7 +14,7 @@ class productModel {
     add_product_lot_association(data) {
         return knex('product_lot_association').insert(data);
     }
-    
+
     update_product(product_id, data) {
         return knex('product').update(data).where({ product_id })
     }
@@ -44,8 +44,7 @@ class productModel {
                 'pl.product_lot_cost',
                 'pl.product_lot_price',
                 'pl.product_lot_id',
-
-
+                'pl.add_date' // เพิ่มวันที่สร้างของ lot
             )
             .where({ 'p.is_active': is_active })
             .orWhere({ 'p.is_active': 0 })
@@ -57,8 +56,40 @@ class productModel {
             })
             .orderBy('p.product_id', 'asc'); // เรียงลำดับตาม product_id จากน้อยไปมาก
     }
-    
 
+    get_product_sales(is_active) {
+        return knex('product as p')
+            .leftJoin('product_type as pt', 'p.product_type_id', '=', 'pt.product_type_id')
+            .leftJoin('product_lot_association as pla', 'p.product_id', '=', 'pla.product_id')
+            .leftJoin('product_lot as pl', 'pla.product_lot_id', '=', 'pl.product_lot_id')
+            .where({ 'p.is_active': is_active })
+            .orWhere({ 'p.is_active': 0 })
+            .andWhere(function () {
+                this.where('pt.product_type_id', '=', knex.raw('(SELECT pt2.product_type_id FROM product_type pt2 WHERE pt2.product_type_id = p.product_type_id ORDER BY pt2.product_type_id DESC LIMIT 1)'));
+            })
+            .andWhere(function () {
+                this.where('pl.product_lot_qty', '>', 0).orWhereNull('pl.product_lot_qty');
+            })
+            .orderBy('pl.add_date', 'asc')
+            .select(
+                'p.product_id',
+                'p.product_name',
+                'p.product_detail',
+                'p.product_image',
+                'p.product_type_id',
+                'p.unit_id',
+                knex.raw('CASE WHEN pl.product_lot_qty = 0 THEN 0 ELSE p.is_active END AS is_active'), // Update is_active based on lot_qty
+                'pt.product_type',
+                'pl.lot_number',
+                'pl.product_lot_qty',
+                'pl.product_lot_cost',
+                'pl.product_lot_price',
+                'pl.product_lot_id',
+                'pl.add_date' // Add lot creation date
+            )
+            .orderBy('p.product_id', 'asc'); // Order by product_id ascending
+    }
+    
 
     get_product_less(number) {
         return knex('product as p').where({ 'p.is_active': 1 }).andWhere('p.product_qty', '<=', number)
@@ -91,7 +122,7 @@ class productModel {
             .update({ product_lot_qty: new_qty })
             .where({ product_lot_id: product_lot_id });
     }
-    
+
     add_order(data) {
         return knex('order').insert(data);
     }
@@ -143,41 +174,41 @@ class productModel {
             const orderProduct = await knex('order_products')
                 .where({ opid: order_product_id })
                 .first();
-    
+
             if (!orderProduct) {
                 throw new Error('Order product not found');
             }
-    
+
             // Check if the order product has already been refunded or returned
             if (orderProduct.status === 'refund' || orderProduct.status === 'returned') {
                 throw new Error('Order product has already been refunded or returned');
             }
-    
+
             // Calculate the quantity to return (you may have your own logic)
             const returnedQuantity = orderProduct.quantity;
-    
+
             // Update the order product status to 'refund' or 'returned'
             await knex('order_products')
                 .where({ opid: order_product_id })
                 .update({ status: 'refund' }); // You can also use 'returned' as the status
-    
+
             // Find the corresponding product lot for the same product_id
             const productLot = await knex('product_lot_association as pla')
                 .select('pl.product_lot_id', 'pl.product_lot_qty')
                 .leftJoin('product_lot as pl', 'pla.product_lot_id', 'pl.product_lot_id')
                 .where({ 'pla.product_id': orderProduct.product_id })
                 .first();
-    
+
             if (!productLot) {
                 throw new Error('Product lot not found');
             }
-    
+
             // Update product_lot_qty by adding the returned quantity
             const newQuantity = productLot.product_lot_qty + returnedQuantity;
             await knex('product_lot')
                 .where({ product_lot_id: productLot.product_lot_id })
                 .update({ product_lot_qty: newQuantity });
-    
+
             // Return a success message or any relevant data
             return { success: true, message: 'Product returned successfully' };
         } catch (error) {
@@ -185,7 +216,7 @@ class productModel {
             throw new Error('Failed to return product');
         }
     }
-    
+
 
     async get_receipt(order_id) {
         try {
@@ -215,12 +246,12 @@ class productModel {
                     'order.order_id': order_id,
                     'order_products.status': 'success' // Filter by 'success' status
                 });
-    
+
             // Check if there are no results with 'success' status
             if (result.length === 0) {
                 throw new Error('ไม่พอข้อมูลสถานะ');
             }
-    
+
             // Calculate the total amount by summing up the individual amounts for each row
             let totalAmount = 0;
             result.forEach((row) => {
@@ -228,7 +259,7 @@ class productModel {
                 const quantity = parseInt(row.quantity) || 0;
                 totalAmount += unitPrice * quantity;
             });
-    
+
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
@@ -238,13 +269,13 @@ class productModel {
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
             }));
-    
+
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
         }
     }
-    
+
     // Inside productModel.js
     async get_receiptrefund(order_id) {
         try {
@@ -274,12 +305,12 @@ class productModel {
                     'order.order_id': order_id,
                     'order_products.status': 'refund' // Filter by 'success' status
                 });
-    
+
             // Check if there are no results with 'success' status
             if (result.length === 0) {
                 throw new Error('ไม่พอข้อมูลสถานะ');
             }
-    
+
             // Calculate the total amount by summing up the individual amounts for each row
             let totalAmount = 0;
             result.forEach((row) => {
@@ -287,7 +318,7 @@ class productModel {
                 const quantity = parseInt(row.quantity) || 0;
                 totalAmount += unitPrice * quantity;
             });
-    
+
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
@@ -297,7 +328,7 @@ class productModel {
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
             }));
-    
+
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
@@ -316,7 +347,7 @@ class productModel {
             .where('order_products.order_id', order_id)
             .join('product', 'order_products.product_id', 'product.product_id');
     }
-    
+
     getPurchaseHistoryByMember(memberId) {
         return knex('order')
             .select(
@@ -325,12 +356,12 @@ class productModel {
                 'order.status',
                 'order.order_date',
                 'order.point'
-                
+
             )
             .where('order.member_id', memberId)
             .where('order.status', 'success');
     }
-    
+
     async getPurchaseHistoryByOrderID(orderId) {
         return knex('order_products')
             .select(
@@ -347,12 +378,12 @@ class productModel {
             .leftJoin('product', 'order_products.product_id', 'product.product_id') // Join with the "product" table
             .where('order_products.order_id', orderId);
     }
-    
+
     get_lot() {
         return knex('product_lot').where('is_active', 1)
     }
-    
-    
+
+
 }
 
 
