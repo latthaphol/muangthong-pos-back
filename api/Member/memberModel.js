@@ -60,6 +60,13 @@ class memberModel {
             .where('member_id', member_id)
             .first(); // ใช้ first() เพื่อดึงแถวแรกเท่านั้น
     }
+    get_memberdetail(member_id) {
+        return knex('member')
+            .where('member_id', member_id)
+            .first(); // ใช้ first() เพื่อดึงแถวแรกเท่านั้น
+    }
+    
+    
 }
 
 module.exports = new memberModel();

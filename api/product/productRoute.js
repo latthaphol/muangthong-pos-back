@@ -33,4 +33,6 @@ router.get('/getPurchaseHistory/:memberId',controller.getPurchaseHistoryByMember
 router.get('/getPurchaseHistoryDetail/:orderID', controller.getPurchaseHistoryDetailByOrderID);
 router.post('/addlotprouduct',controller.add_lot);
 router.get('/getlotprouduct',controller.get_lot);
+router.put('/updatelot/:lotId', controller.update_lot);
+
 module.exports = router;
