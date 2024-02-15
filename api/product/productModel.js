@@ -385,8 +385,12 @@ class productModel {
     get_lot() {
         return knex('product_lot').where('is_active', 1)
     }
-
-
+    update_lot(lotId, data) {
+        return knex('product_lot').where({ product_lot_id: lotId }).update(data);
+    }
+    
+   
+    
 }
 
 

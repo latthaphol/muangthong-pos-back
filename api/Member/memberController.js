@@ -133,6 +133,20 @@ async update_member(req, res) {
             failed(res, 'Internal Server Error');
         }
     }
+
+    async get_memberdetail(req, res) {
+        try {
+            const memberId = req.params.member_id; // ดึงค่า ID ของสมาชิกจาก URL parameters
+            // นำ ID ของสมาชิกไปใช้งาน เช่น ค้นหาข้อมูลสมาชิกในฐานข้อมูล
+            const member = await model.get_memberdetail(memberId); // เรียกใช้งานฟังก์ชัน get_memberdetail จากโมเดล โดยส่งค่า member_id ไปด้วย
+            res.json(member); // ส่งข้อมูลสมาชิกที่ได้รับกลับไปให้กับไคลเอนต์
+        } catch (error) {
+            console.error('Error fetching member detail:', error);
+            res.status(500).json({ error: 'Failed to fetch member detail' });
+        }
+    }
+    
+    
     
     
     async softDeletePromotion(req, res) {

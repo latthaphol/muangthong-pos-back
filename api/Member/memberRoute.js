@@ -7,5 +7,6 @@ router.post('/add_member', controller.add_member)
 router.get('/get_member', controller.get_members)
 router.put('/update_member/:member_id', controller.update_member);
 router.post('/delete_member', controller.delete_member);
+router.get('/get_memberdetail/:member_id', controller.get_memberdetail)
 
 module.exports = router

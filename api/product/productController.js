@@ -9,7 +9,7 @@ class productController {
 
     async add_product(req, res) {
         try {
-            const fields = ["product_name", "product_detail",  "product_type_id", "unit_id", "product_length", "product_width",]
+            const fields = ["product_name", "product_detail",  "product_type_id", "unit_id", "product_length", "product_width","product_thickness"]
             let { object, missing } = await check_field(req, fields)
             if (missing.length > 0) {
                 failed(res, `Column "${missing}" is missing!`)
@@ -462,6 +462,31 @@ class productController {
         }
      }
 
+     async update_lot(req, res) {
+        try {
+            const fields = [ "lot_number", "add_date", "product_lot_qty", "product_lot_cost", "product_lot_price"];
+            const { lotId } = req.params; // เปลี่ยนเป็น lotId เนื่องจากชื่อพารามิเตอร์ที่รับมาใน URL คือ lotId
+            let { object, missing } = await check_field(req, fields);
+    
+            if (missing.length > 0) {
+                failed(res, `Column "${missing}" is missing!`);
+            } else {
+                // เรียกใช้ model.update_lot ด้วย id ที่ได้รับ
+                const result = await model.update_lot(lotId, object); 
+                success(res, result, "Update Lot success!"); // แก้ข้อความให้เป็น "Update Lot success!"
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+
+    
+    
+    
+    
+
+    
  async get_lot(req, res) {
     try {
         const result = await model.get_lot()
