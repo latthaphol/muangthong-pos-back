@@ -4,7 +4,7 @@ const options = {
         host: 'localhost',
         user: 'root',
         password: '',
-        database: 'pos_productl1',
+        database: 'main',
         port: 3306
     }
 }
