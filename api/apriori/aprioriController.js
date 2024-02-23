@@ -2,82 +2,115 @@ const knex = require('../../config/database');
 const AprioriModel = require('./aprioriModel');
 
 class AprioriController {
-    async calculateItemSupport(req, res) {
-        try {
-            const aprioriModel = new AprioriModel(); // Create an instance of AprioriModel
-            const results = await aprioriModel.calculateItemSupport(); // Call the method on the instance
+  async findFrequentItemsets(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
 
-            if (results) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Results success',
-                    data: results
-                });
-            } else {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Failed to return product',
-                    data: null
-                });
-            }
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                data: null
-            });
-        }
-    }
+      // Call the getSoldProducts method
+      const soldProducts = await aprioriModel.getSoldProducts();
 
-    async calculateconfidenceandlif(req, res) {
-        try {
-            // Get the results from calculateItemSupport
-            const aprioriModel = new AprioriModel(); // Create an instance of AprioriModel
-            const supportResults = await aprioriModel.calculateItemSupport(); // Call the method on the instance
-    
-            // Calculate Confidence and Lift for each pair of products from supportResults
-            const resultsWithConfidenceAndLift = supportResults.map(async (result) => {
-                const { Item1, Item2, Support } = result;
-    
-                // Calculate Support for Item1 and Item2
-                const SupportItem1 = await AprioriModel.calculateSupport(Item1);
-                const SupportItem2 = await AprioriModel.calculateSupport(Item2);
-    
-                // Calculate Confidence and Lift
-                const Confidence = Support / SupportItem1;
-                const Lift = Support / (SupportItem1 * SupportItem2);
-    
-                return { Item1, Item2, Support, Confidence, Lift };
-            });
-    
-            // Check if results exist and send response
-            if (resultsWithConfidenceAndLift) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Results success',
-                    data: resultsWithConfidenceAndLift
-                });
-            } else {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Failed to return product',
-                    data: null
-                });
-            }
-    
-        } catch (error) {
-            // Handle any errors that occur
-            console.error(error);
-            return res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                data: null
-            });
-        }
+      // Count the number of order_ids
+      const soldProductsCount = soldProducts.length;
+      console.log("จำนวน order_id ที่ได้รับ:", soldProductsCount);
+
+      // Add soldProductsCount to the response JSON
+      const responseJSON = {
+        soldProducts: soldProducts,
+        soldProductsCount: soldProductsCount
+      };
+
+      // Send the retrieved data back as JSON
+      res.json(responseJSON);
+    } catch (error) {
+      console.error('Error in findFrequentItemsets:', error);
+      res.status(500).send('Internal Server Error');
     }
-    
-    
+  }
+
+
+  async calculateSupportForProduct(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+
+      // Call the calculateSupportForProducts method
+      const supportForProducts = await aprioriModel.calculateSupportForProducts();
+
+      // Send the retrieved data back as JSON
+      res.json(supportForProducts);
+    } catch (error) {
+      console.error('Error in calculateSupportForProduct:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+  async calculateitemset(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+
+      // Call the calculateSupportForProducts method
+      const supportForProducts = await aprioriModel.calculateItemset();
+
+      // Send the retrieved data back as JSON
+      res.json(supportForProducts);
+    } catch (error) {
+      console.error('Error in calculateSupportForProduct:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+
+
+  async calculateSupportForItemset(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+
+      // Call the calculateSupportForProducts method
+      const supportForProducts = await aprioriModel.calculateSupportForItemset();
+
+      // Send the retrieved data back as JSON
+      res.json(supportForProducts);
+    } catch (error) {
+      console.error('Error in  calculateSupportForItemset:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+  async findItemsetInReceipts(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+
+      // Call the calculateSupportForProducts method
+      const supportForProducts = await aprioriModel.findItemsetInReceipts();
+
+      // Send the retrieved data back as JSON
+      res.json(supportForProducts);
+    } catch (error) {
+      console.error('Error in  findItemsetInReceipts:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+
+  async calculateSupportForItemsetPairs(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+
+      // Call the calculateSupportForItemset method to get combinedPairs
+      const combinedPairs = await aprioriModel.calculateSupportForItemset();
+
+      // Call the calculateSupportForItemsetPairs method with combinedPairs as argument
+      const supportForItemsetPairs = await aprioriModel.calculateSupportForItemsetPairs(combinedPairs);
+
+      // Send the retrieved data back as JSON
+      res.json(supportForItemsetPairs);
+    } catch (error) {
+      console.error('Error in calculateSupportForItemsetPairs:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+
 
 }
 

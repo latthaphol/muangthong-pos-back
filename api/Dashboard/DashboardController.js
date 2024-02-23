@@ -109,31 +109,30 @@ class DashboardController {
 
 
 
-
-
   async getTopSellingProducts(req, res) {
     try {
-      const topSellingProducts = await knex('product')
-        .leftJoin('order_products', 'product.product_id', '=', 'order_products.product_id')
-        .leftJoin('product_type', 'product.product_type_id', '=', 'product_type.product_type_id')
-        .select(
-          'product.product_id as sNo',
-          'product.product_name as productName',
-          'product_type.product_type as category',
-          'product.product_qty as stock',
-          knex.raw('SUM(order_products.quantity * order_products.unit_price) as totalSales')
-        )
-        .where('order_products.status', 'success')  // กรองเฉพาะ order_products ที่มีสถานะเป็น 'success'
-        .groupBy('product.product_id')
-        .orderBy('totalSales', 'desc')
-        .limit(10);
-
-      success(res, topSellingProducts, "Top Selling Products");
+        const topSellingProducts = await knex('product')
+            .leftJoin('order_products', 'product.product_id', '=', 'order_products.product_id')
+            .leftJoin('product_type', 'product.product_type_id', '=', 'product_type.product_type_id')
+            .select(
+                'product.product_id as Product_ID',
+                'product.product_name as Product_Name',
+                'product_type.product_type as Product_Type',
+                knex.raw('COALESCE(SUM(order_products.quantity), 0) as Stock'),
+                knex.raw('COALESCE(SUM(order_products.quantity * order_products.unit_price), 0) as Total_Sales')
+            )
+            .groupBy('product.product_id')
+            .orderBy(knex.raw('COALESCE(SUM(order_products.quantity * order_products.unit_price), 0)'), 'desc')
+            .limit(10); // เลื่อนไปท้ายสุด
+        success(res, topSellingProducts, "Top Selling Products");
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal Server Error' });
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-  }
+}
+
+
+  
 
   async getMonthlySales(req, res) {
     try {

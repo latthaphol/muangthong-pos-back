@@ -9,7 +9,7 @@ class productController {
 
     async add_product(req, res) {
         try {
-            const fields = ["product_name", "product_detail",  "product_type_id", "unit_id", "product_length", "product_width","product_thickness"]
+            const fields = ["product_name", "product_detail", "product_type_id", "unit_id", "product_length", "product_width", "product_thickness"]
             let { object, missing } = await check_field(req, fields)
             if (missing.length > 0) {
                 failed(res, `Column "${missing}" is missing!`)
@@ -25,16 +25,7 @@ class productController {
                         console.log('File renamed successfully!');
                     });
                     await model.update_product_img({ product_id: dbRes[0], product_image: newPath })
-
                 }
-
-                    const productLotAssociationData ={
-                        product_id:dbRes[0],
-                        product_lot_id:req.body.product_lot_id
-                    };
-                // 
-                await model.add_product_lot_association(productLotAssociationData);
-
                 success(res, object, "Add product success!")
             }
         } catch (error) {
@@ -152,7 +143,7 @@ class productController {
             failed(res, 'Internal Server Error');
         }
     }
-    
+
 
     async get_product(req, res) {
         try {
@@ -216,7 +207,7 @@ class productController {
     async confirm_order(req, res) {
         try {
             const {
-                totalAmountText, // Assuming you have totalAmountText in the request body
+                totalAmountText,
                 cachedTotalAmountText,
                 totalAmount,
                 selectedProducts,
@@ -225,19 +216,20 @@ class productController {
                 point,
                 discountAmount,
                 discountedTotalAmount,
-                product_cost
+                product_cost,
+                userId // เพิ่ม userId จาก frontend
             } = req.body;
-
+    
             if (!totalAmount || !selectedProducts || !point) {
                 return failed(res, "Invalid input data");
             }
-
+    
             const memberId = selectedMember || null;
             const promotionId = selectedPromotionId || null;
-
+    
             let successMessage = "Order confirmed successfully";
             let errorMessage = "Error confirming order";
-
+    
             const newOrder = await model.add_order({
                 total_amount: totalAmountText,
                 member_id: memberId,
@@ -246,50 +238,74 @@ class productController {
                 discountAmount: discountAmount,
                 discountedTotalAmount: discountedTotalAmount,
                 status: 'success',
-
-
             });
-
-            // วนลูปเพื่อปรับปรุงสต็อกสินค้าและเพิ่มรายการสั่งซื้อสินค้า
+    
             for (const product of selectedProducts) {
-                const newProductQty = product.product_qty - product.quantity;
-
-                await model.update_product_qty(product.product_lot_id, newProductQty);
-
-                await model.add_order_product({
-                    order_id: newOrder[0],
+                const productLots = await model.get_product_lots_by_product_id(product.product_id);
+                // Sort lots by add_date to find the oldest
+                productLots.sort((a, b) => new Date(a.add_date) - new Date(b.add_date));
+    
+                let remainingQuantity = product.quantity;
+                let lotUsageDetails = []; // To store the details of lot usage
+    
+                for (const lot of productLots) {
+                    if (lot.product_lot_qty >= remainingQuantity) {
+                        // Update the lot with the new quantity
+                        await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - remainingQuantity);
+                        lotUsageDetails.push({ product_lot_id: lot.product_lot_id, used_quantity: remainingQuantity });
+                        remainingQuantity = 0;
+                        break;
+                    } else {
+                        remainingQuantity -= lot.product_lot_qty;
+                        lotUsageDetails.push({ product_lot_id: lot.product_lot_id, used_quantity: lot.product_lot_qty });
+                        // If the entire lot quantity is used up, set its quantity to 0
+                        await model.update_product_lot_quantity(lot.product_lot_id, 0);
+                    }
+                }
+    
+                if (remainingQuantity > 0) {
+                    errorMessage = "Insufficient quantity in lots for product ID: " + product.product_id;
+                    break;
+                }
+                await model.add_stock_transaction({
                     product_id: product.product_id,
                     quantity: product.quantity,
-                    unit_price: product.unit_price,
-                    cost_price: product.product_cost, // ใช้ค่า product_cost ที่ได้รับมา
-                    status: 'success',
+                    transaction_date: new Date(),
+                    status: 'sales',
+                    seller_id : userId // ใช้ userId จาก frontend
                 });
+    
+                // For each product, add order_product details including the product_lot_id and used_quantity
+                for (const detail of lotUsageDetails) {
+                    await model.add_order_product({
+                        order_id: newOrder[0],
+                        product_id: product.product_id,
+                        quantity: detail.used_quantity, // Use the quantity from lot usage detail
+                        unit_price: product.unit_price,
+                        cost_price: product.product_cost,
+                        status: 'success',
+                        product_lot_id: detail.product_lot_id // Include product_lot_id in order_products
+                    });
+                }
             }
-
-            // อัปเดตค่า "point" ของสมาชิก
+            // ใส่ข้อมูลลงในตาราง stock_transaction โดยใส่ status เป็น "sales"
+        
+            // Update member's point
             if (memberId) {
                 const member = await model.get_member(memberId);
                 const currentPoint = member.point || 0;
                 const updatedPoint = currentPoint + point;
-                const updatedMember = await model.update_member_point(memberId, updatedPoint);
-
-                if (!updatedMember) {
-                    errorMessage = "Failed to update member's point";
-                }
+                await model.update_member_point(memberId, updatedPoint);
             }
-
-            // ลดโปรโมชั่น
+    
+            // Reduce promotion quota
             if (promotionId) {
                 const promotion = await model.get_promotion(promotionId);
-                const currentpromotion = promotion.quota || 0;
-                const updatepromotion = currentpromotion - 1;
-
-                const updatePromotionSuccess = await model.update_promotion_quota(promotionId, updatepromotion);
-                if (!updatePromotionSuccess) {
-                    errorMessage = "Failed to update promotion quota";
-                }
+                const currentPromotionQuota = promotion.quota || 0;
+                const updatedPromotionQuota = currentPromotionQuota - 1;
+                await model.update_promotion_quota(promotionId, updatedPromotionQuota);
             }
-
+    
             if (errorMessage === "Error confirming order") {
                 return success(res, newOrder, successMessage);
             } else {
@@ -300,6 +316,8 @@ class productController {
             failed(res, "Error confirming order");
         }
     }
+    
+
 
 
     get_member(memberId) {
@@ -324,13 +342,13 @@ class productController {
     async return_product(req, res) {
         try {
             const { opid } = req.body;
-    
+
             if (!opid) {
                 failed(res, 'Column "opid" is missing!');
             } else {
                 // Assuming you have a model method for handling return products
                 const returnResult = await model.return_product(opid);
-    
+
                 if (returnResult) {
                     success(res, returnResult, 'Return product success!');
                 } else {
@@ -342,7 +360,7 @@ class productController {
             failed(res, 'Internal Server Error');
         }
     }
-    
+
 
     async get_receipt(req, res) {
         try {
@@ -362,6 +380,7 @@ class productController {
             failed(res, 'Internal Server Error');
         }
     }
+
     async get_receiptrefund(req, res) {
         try {
             const { order_id } = req.params; // การดึงค่า order_id จากพารามิเตอร์ URL
@@ -390,10 +409,10 @@ class productController {
             if (!order_id) {
                 return failed(res, 'Column "order_id" is missing!');
             }
-    
+
             // Use the order_id to fetch order products from the database
             const orderProducts = await model.get_order_products(order_id);
-    
+
             if (orderProducts) {
                 return success(res, orderProducts, 'Order products retrieved successfully!');
             } else {
@@ -407,13 +426,13 @@ class productController {
     async getPurchaseHistoryByMember(req, res) {
         try {
             const { memberId } = req.params;
-    
+
             if (!memberId) {
                 return failed(res, 'Member ID is missing');
             }
-    
+
             const purchaseHistory = await model.getPurchaseHistoryByMember(memberId);
-    
+
             if (purchaseHistory.length > 0) {
                 return success(res, purchaseHistory, 'Purchase history retrieved successfully');
             } else {
@@ -427,13 +446,13 @@ class productController {
     async getPurchaseHistoryDetailByOrderID(req, res) {
         try {
             const { orderID } = req.params;
-    
+
             if (!orderID) {
                 return failed(res, 'Order ID is missing');
             }
-    
+
             const purchaseHistory = await model.getPurchaseHistoryByOrderID(orderID);
-    
+
             if (purchaseHistory.length > 0) {
                 return success(res, purchaseHistory, 'Purchase history retrieved successfully');
             } else {
@@ -444,35 +463,35 @@ class productController {
             failed(res, 'Internal Server Error');
         }
     }
-    
-    async add_lot(req,res){
+
+    async add_lot(req, res) {
         try {
-            const fields = ["lot_number", "add_date", "product_lot_qty", "product_lot_cost", "product_lot_price"]
-            let { object, missing } = await check_field(req, fields)
+            const fields = ["add_date", "product_lot_qty", "product_lot_cost", "product_lot_price", "product_id"];
+            let { object, missing } = await check_field(req, fields);
             if (missing.length > 0) {
-                failed(res, `Column "${missing}" is missing!`)
+                failed(res, `Column "${missing}" is missing!`);
             } else {
-                const result = await model.add_lot(object)
-    
-                success(res, result, "Add Lot success!")
+                const result = await model.add_lot(object);
+                success(res, result, "Add Lot success!");
             }
         } catch (error) {
-            console.log(error)
-            failed(res, 'Internal Server Error')
+            console.log(error);
+            failed(res, 'Internal Server Error');
         }
-     }
+    }
 
-     async update_lot(req, res) {
+
+    async update_lot(req, res) {
         try {
-            const fields = [ "lot_number", "add_date", "product_lot_qty", "product_lot_cost", "product_lot_price"];
+            const fields = ["lot_number", "add_date", "product_lot_qty", "product_lot_cost", "product_lot_price"];
             const { lotId } = req.params; // เปลี่ยนเป็น lotId เนื่องจากชื่อพารามิเตอร์ที่รับมาใน URL คือ lotId
             let { object, missing } = await check_field(req, fields);
-    
+
             if (missing.length > 0) {
                 failed(res, `Column "${missing}" is missing!`);
             } else {
                 // เรียกใช้ model.update_lot ด้วย id ที่ได้รับ
-                const result = await model.update_lot(lotId, object); 
+                const result = await model.update_lot(lotId, object);
                 success(res, result, "Update Lot success!"); // แก้ข้อความให้เป็น "Update Lot success!"
             }
         } catch (error) {
@@ -481,21 +500,33 @@ class productController {
         }
     }
 
-    
-    
-    
-    
 
-    
- async get_lot(req, res) {
-    try {
-        const result = await model.get_lot()
-        success(res, result)
-    } catch (error) {
-        console.log(error)
-        failed(res, 'Internal Server Error')
+
+
+
+
+
+    async get_lot(req, res) {
+        try {
+            const { product_id } = req.body; // หรือ req.params หรือ req.query ตามวิธีการส่งข้อมูลในคำขอของคุณ
+            const result = await model.get_lot(product_id);
+            success(res, result);
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
     }
-}
+
+
+    async get_lot_all(req, res) {
+        try {
+            const result = await model.get_lot_sum(); // Make sure to call the method
+            success(res, result);
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
 
 }
 module.exports = new productController()
