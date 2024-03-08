@@ -17,5 +17,8 @@ const upload = multer({ storage: storage });
 
 
 router.post('/twoproduct', controller.getTwoProduct);
+router.post('/additemset', controller.add_itemset);
+router.get('', controller.get_itemset);
+
 
 module.exports = router;
