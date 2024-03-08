@@ -69,64 +69,64 @@ class memberController {
 
     // Edit employee information
 
-    
+
     // Edit member information
-async update_member(req, res) {
-    try {
-        const { member_id } = req.params; // Assuming you receive member_id
+    async update_member(req, res) {
+        try {
+            const { member_id } = req.params; // Assuming you receive member_id
 
-        // Check if the member exists
-        const existingMember = await model.get_member_by_id(member_id);
-        if (!existingMember) {
-            failed(res, 'Member not found');
-            return;
+            // Check if the member exists
+            const existingMember = await model.get_member_by_id(member_id);
+            if (!existingMember) {
+                failed(res, 'Member not found');
+                return;
+            }
+
+            // Extract the fields you want to update from the request body
+            const {
+                member_fname,
+                member_lname,
+                member_email,
+                point,
+                member_address,
+                member_phone,
+            } = req.body;
+
+            // Create an object with the fields you want to update
+            const updatedMember = {
+                member_fname: member_fname || existingMember.member_fname,
+                member_lname: member_lname || existingMember.member_lname,
+                member_email: member_email || existingMember.member_email,
+                point: point || existingMember.point,
+                member_address: member_address || existingMember.member_address,
+                member_phone: member_phone || existingMember.member_phone,
+            };
+
+            // Update the member in the database
+            const updateResult = await model.update_member(member_id, updatedMember);
+
+            if (updateResult) {
+                success(res, { message: 'Member information updated successfully' });
+            } else {
+                failed(res, 'Failed to update member information');
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
         }
-
-        // Extract the fields you want to update from the request body
-        const {
-            member_fname,
-            member_lname,
-            member_email,
-            point,
-            member_address,
-            member_phone,
-        } = req.body;
-
-        // Create an object with the fields you want to update
-        const updatedMember = {
-            member_fname: member_fname || existingMember.member_fname,
-            member_lname: member_lname || existingMember.member_lname,
-            member_email: member_email || existingMember.member_email,
-            point: point || existingMember.point,
-            member_address: member_address || existingMember.member_address,
-            member_phone: member_phone || existingMember.member_phone,
-        };
-
-        // Update the member in the database
-        const updateResult = await model.update_member(member_id, updatedMember);
-
-        if (updateResult) {
-            success(res, { message: 'Member information updated successfully' });
-        } else {
-            failed(res, 'Failed to update member information');
-        }
-    } catch (error) {
-        console.log(error);
-        failed(res, 'Internal Server Error');
     }
-}
 
-    
+
 
     // Soft delete an employee
     async delete_member(req, res) {
         try {
             const { member_id } = req.body; // Assuming you receive member_id
-            if(!member_id){
-                failed(res,'Member ID is missing')
-            }    
-          else {
-               await model.soft_delete_member(member_id);
+            if (!member_id) {
+                failed(res, 'Member ID is missing')
+            }
+            else {
+                await model.soft_delete_member(member_id);
             }
         } catch (error) {
             console.log(error);
@@ -145,10 +145,26 @@ async update_member(req, res) {
             res.status(500).json({ error: 'Failed to fetch member detail' });
         }
     }
-    
-    
-    
-    
+
+    async get_password(req, res) {
+        try {
+            const memberId = req.params.member_id;
+            const newPassword = generateRandomPassword(8); // Generate random password
+            
+            // Hash the new password using bcrypt
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Update the new hashed password in the database
+            await model.updateUserPassword(memberId, hashedPassword);
+
+            success(res, { newPassword }, "New password generated and updated successfully");
+        } catch (error) {
+            console.error('Error generating and updating password:', error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+
+
     async softDeletePromotion(req, res) {
         try {
             const { promotion_id } = req.body;
@@ -167,6 +183,15 @@ async update_member(req, res) {
         }
     }
 
-}
 
+}
+function generateRandomPassword(length) {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        password += charset[randomIndex];
+    }
+    return password;
+}
 module.exports = new memberController();
