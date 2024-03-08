@@ -8,6 +8,7 @@ const promotion = require("../api/promotion/promotionRoute");
 const member = require("./Member/memberRoute");
 const dashboard = require("./Dashboard/DashboardRoute");
 const apriori = require("./apriori/aprioriRoute"); // Adjust the path accordingly
+const itemset = require("./itemset/itemsetRoute"); // Adjust the path accordingly
 
 exports.routeApi = (app, version) => {
     app.use(version + "/auth", auth);
@@ -18,4 +19,6 @@ exports.routeApi = (app, version) => {
     app.use(version + "/member", member);
     app.use(version + "/dashboard", dashboard);
     app.use(version + "/apriori", apriori);
+    app.use(version + "/itemset", itemset);
+
 };
