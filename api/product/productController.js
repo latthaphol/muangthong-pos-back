@@ -563,7 +563,6 @@ class productController {
   async update_lot(req, res) {
     try {
       const fields = [
-        "lot_number",
         "add_date",
         "product_lot_qty",
         "product_lot_cost",
