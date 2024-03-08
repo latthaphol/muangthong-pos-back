@@ -29,36 +29,7 @@ class AprioriController {
   }
 
 
-  async calculateSupportForProduct(req, res) {
-    try {
-      // Instantiate AprioriModel
-      const aprioriModel = new AprioriModel();
 
-      // Call the calculateSupportForProducts method
-      const supportForProducts = await aprioriModel.calculateSupportForProducts();
-
-      // Send the retrieved data back as JSON
-      res.json(supportForProducts);
-    } catch (error) {
-      console.error('Error in calculateSupportForProduct:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  }
-  async calculateitemset(req, res) {
-    try {
-      // Instantiate AprioriModel
-      const aprioriModel = new AprioriModel();
-
-      // Call the calculateSupportForProducts method
-      const supportForProducts = await aprioriModel.calculateItemset();
-
-      // Send the retrieved data back as JSON
-      res.json(supportForProducts);
-    } catch (error) {
-      console.error('Error in calculateSupportForProduct:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  }
 
 
   async calculateSupportForItemset(req, res) {
@@ -76,21 +47,8 @@ class AprioriController {
       res.status(500).send('Internal Server Error');
     }
   }
-  async findItemsetInReceipts(req, res) {
-    try {
-      // Instantiate AprioriModel
-      const aprioriModel = new AprioriModel();
 
-      // Call the calculateSupportForProducts method
-      const supportForProducts = await aprioriModel.findItemsetInReceipts();
 
-      // Send the retrieved data back as JSON
-      res.json(supportForProducts);
-    } catch (error) {
-      console.error('Error in  findItemsetInReceipts:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  }
 
   async calculateSupportForItemsetPairs(req, res) {
     try {
@@ -111,7 +69,49 @@ class AprioriController {
     }
   }
 
+  // async calculateConfidence(req, res) {
+  //   try {
+  //     // Instantiate AprioriModel
+  //     const aprioriModel = new AprioriModel();
+  
+  //     // Call the calculateSupportForItemset method to get combinedPairs
+  //     const combinedPairs = await aprioriModel.calculateSupportForItemset();
+  
+  //     // Call the calculateSupportForItemsetPairs method to get support for itemset pairs
+  //     const supportCounts = await aprioriModel.calculateSupportForItemsetPairs(combinedPairs);
+  
+  //     // Call the calculateConfidence method with combinedPairs and supportCounts as arguments
+  //     const confidenceForItemsetPairs = await aprioriModel.calculateConfidenceAndLift(combinedPairs, supportCounts);
+  
+  //     // Send the retrieved data back as JSON
+  //     res.json(confidenceForItemsetPairs);
+  //   } catch (error) {
+  //     console.error('Error in calculateConfidence:', error);
+  //     res.status(500).send('Internal Server Error');
+  //   }
+  // }
 
+  async calculateLifePairs(req, res) {
+    try {
+      // Instantiate AprioriModel
+      const aprioriModel = new AprioriModel();
+  
+      // Call the calculateSupportForItemset method to get combinedPairs
+      const combinedPairs = await aprioriModel.calculateSupportForItemset();
+  
+      // Call the calculateSupportForItemsetPairs method to get support for itemset pairs
+      const supportCounts = await aprioriModel.calculateSupportForItemsetPairs(combinedPairs);
+  
+      // Call the calculateConfidence method with combinedPairs and supportCounts as arguments
+      const confidenceForItemsetPairs = await aprioriModel.calculateConfidenceAndLiftPairs(combinedPairs, supportCounts);
+  
+      // Send the retrieved data back as JSON
+      res.json(confidenceForItemsetPairs);
+    } catch (error) {
+      console.error('Error in calculateConfidence:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
 }
 
 module.exports = new AprioriController();
