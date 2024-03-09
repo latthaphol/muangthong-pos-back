@@ -52,20 +52,14 @@ class employeeController {
 async update_employee(req, res) {
     try {
         const { employee_id } = req.params; 
-        const fields = ["user_username", "user_name_surname", "user_password"];
+        const fields = ["user_username", "user_name_surname"];
 
         let { object, missing } = await check_field(req, fields, {});
 
         if (missing.length > 0) {
             failed(res, `Column(s) "${missing.join(', ')}" is missing!`);
         } else {
-            // เข้ารหัสรหัสผ่านก่อนบันทึกลงในฐานข้อมูล
-            if (object.user_password) {
-                const saltRounds = 10;
-                object.user_password = await bcrypt.hash(object.user_password, saltRounds);
-            }
-
-            // อัปเดตข้อมูลพนักงานในฐานข้อมูล
+    
             const updateResult = await model.edit_employee(employee_id, object);
 
             if (updateResult) {
@@ -80,6 +74,42 @@ async update_employee(req, res) {
     }
 }
 
+async changePassword(req, res) {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const { user_id } = req.body; // สมมติว่ามี middleware ที่ตรวจสอบ user_id ใส่ไว้แล้ว
+
+        // ตรวจสอบว่ามีข้อมูลที่จำเป็นส่งมาหรือไม่
+        if (!oldPassword || !newPassword) {
+            return failed(res, 'กรุณากรอกข้อมูลให้ครบถ้วน');
+        }
+
+        // ดึงข้อมูลผู้ใช้จากฐานข้อมูล
+        const user = await knex('user').where({ user_id }).first();
+        if (!user) {
+            return failed(res, 'ผู้ใช้ไม่พบ');
+        }
+
+        // ตรวจสอบรหัสผ่านเดิม
+        const isPasswordCorrect = await bcrypt.compare(oldPassword, user.user_password);
+        if (!isPasswordCorrect) {
+            return failed(res, 'รหัสผ่านเดิมไม่ถูกต้อง');
+        }
+
+        // สร้างเซลต์สำหรับการเข้ารหัสรหัสผ่านใหม่
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // บันทึกรหัสผ่านใหม่ลงในฐานข้อมูล
+        await knex('user').where({ user_id }).update({ user_password: hashedPassword });
+
+        // ส่งคำตอบกลับให้ผู้ใช้
+        success(res, 'เปลี่ยนรหัสผ่านสำเร็จ');
+    } catch (error) {
+        console.error(error);
+        failed(res, 'Internal Server Error');
+    }
+}
 
 async delete_employee(req, res) {
     try {
