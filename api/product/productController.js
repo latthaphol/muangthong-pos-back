@@ -373,16 +373,64 @@ class productController {
 
     async getOrderDetails(req, res) {
         try {
-            const result = await knex('order')
-                .select('order.order_id', 'order.total_amount', 'order.status', 'order.point_use', 'order.order_date', 'order_products.product_id', 'order_products.status as op_status', 'order_products.quantity', 'order_products.unit_price', 'order_products.cost_price')
-                .innerJoin('order_products', 'order.order_id', 'order_products.order_id');
-
-            success(res, result, "Order Details");
+          const orders = await knex("order")
+            .select(
+              "order.order_id",
+              "order.total_amount",
+              "order.status",
+              "order.point_use",
+              "order.order_date",
+              "order_products.product_id",
+              "order_products.status as op_status",
+              "order_products.unit_price",
+              "order_products.cost_price"
+            )
+            .leftJoin("order_products", "order.order_id", "order_products.order_id")
+            .orderBy("order.order_id");
+    
+          const orderDetails = orders.reduce((acc, order) => {
+            const existingOrder = acc.find(
+              (item) => item.order_id === order.order_id
+            );
+            if (existingOrder) {
+              existingOrder.order_products.push({
+                product_id: order.product_id,
+                op_status: order.op_status,
+                unit_price: order.unit_price,
+                cost_price: order.cost_price,
+              });
+              // เพิ่มจำนวนสินค้าของแต่ละรายการสั่งซื้อ
+              existingOrder.total_quantity = existingOrder.order_products.reduce(
+                (total, product) => total + 1,
+                0
+              );
+            } else {
+              acc.push({
+                order_id: order.order_id,
+                total_amount: order.total_amount,
+                total_quantity: 1, // รายการแรกจะมีจำนวนสินค้าเป็น 1 เนื่องจากมีสินค้าใน order
+                status: order.status,
+                point_use: order.point_use,
+                order_date: order.order_date,
+                order_products: [
+                  {
+                    product_id: order.product_id,
+                    op_status: order.op_status,
+                    unit_price: order.unit_price,
+                    cost_price: order.cost_price,
+                  },
+                ],
+              });
+            }
+            return acc;
+          }, []);
+    
+          success(res, orderDetails, "Order Details");
         } catch (error) {
-            console.log(error);
-            failed(res, { error: 'Internal Server Error' });
+          console.log(error);
+          failed(res, { error: "Internal Server Error" });
         }
-    }
+      }
     async return_product(req, res) {
         try {
             const { opid } = req.body;
