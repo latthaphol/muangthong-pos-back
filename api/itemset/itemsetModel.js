@@ -3,44 +3,29 @@ const knex = require("../../config/database");
 class itemsetModel {
   async getProductDetails(productId) {
     try {
-      const productDetails = await knex("product")
-        .select(
-          "product.product_id",
-          "product.product_name",
-          "product.product_detail",
-          "product.product_image",
-          "product.product_type_id",
-          "product.product_width",
-          "product.product_length",
-          "product.product_thickness",
-          "product.unit_id",
-          "product.is_active",
-          "product_lot.product_lot_qty",
-          "product_lot.product_lot_cost",
-          "product_lot.product_lot_price",
-          knex.raw(
-            "(SELECT MIN(add_date) FROM product_lot WHERE product_lot.product_id = product.product_id AND product_lot.is_active = ?) as lot_add_date",
-            [1]
-          )
-        )
-        .leftJoin(
-          "product_lot",
-          function() {
-            this.on("product.product_id", "=", "product_lot.product_id").andOn("product_lot.is_active", "=", 1)
-          }
-        )
-        .where("product.product_id", productId)
-        .andWhere("product.is_active", 1)
-        .groupBy("product.product_id")
-        .having(knex.raw("COUNT(product_lot.product_id) > 0"))
-        .first();
-
-      return productDetails;
+        const result = await knex
+            .select(
+                "p.product_id",
+                "p.product_name",
+                "p.product_detail",
+                knex.raw("SUM(pl.product_lot_qty) AS total_qty"), // รวมจำนวนสินค้าทั้งหมดจากทุก lot
+                knex.raw("SUM(pl.product_lot_cost) AS total_cost"), // รวมราคาทุก lot
+                knex.raw("SUM(pl.product_lot_price) AS total_price") // รวมราคาขายทุก lot
+            )
+            .from("product as p")
+            .innerJoin("product_lot as pl", "p.product_id", "pl.product_id")
+            .where("p.product_id", productId)
+            .andWhere("p.is_active", 1)
+            .andWhere("pl.is_active", 1)
+            .orderBy("pl.product_lot_price", "desc")
+            .groupBy("p.product_id", "p.product_name", "p.product_detail"); // ระบุให้รวมเฉพาะสินค้าเดียวกัน
+        return result;
     } catch (error) {
-      console.error("Error fetching product details:", error);
-      throw error;
+        console.error("Error fetching product details:", error);
+        throw error;
     }
-  }
+}
+  
 
   async getProductLotWithHighestPrice(productId) {
     try {
