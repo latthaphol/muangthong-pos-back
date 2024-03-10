@@ -25,13 +25,12 @@ class itemsetModel {
         )
         .leftJoin(
           "product_lot",
-          "product.product_id",
-          "=",
-          "product_lot.product_id"
+          function() {
+            this.on("product.product_id", "=", "product_lot.product_id").andOn("product_lot.is_active", "=", 1)
+          }
         )
         .where("product.product_id", productId)
         .andWhere("product.is_active", 1)
-        .andWhere("product_lot.is_active", 1)
         .groupBy("product.product_id")
         .having(knex.raw("COUNT(product_lot.product_id) > 0"))
         .first();
@@ -43,19 +42,49 @@ class itemsetModel {
     }
   }
 
+  async getProductLotWithHighestPrice(productId) {
+    try {
+      const productLot = await knex("product_lot")
+        .select("product_lot_id")
+        .where("product_id", productId)
+        .andWhere("is_active", 1)
+        .orderBy("product_lot_price", "desc")
+        .first();
+
+      return productLot.product_lot_id;
+    } catch (error) {
+      console.error("Error fetching product lot with highest price:", error);
+      throw error;
+    }
+  }
+
+  async reduceProductLotQuantity(productLotId, quantity) {
+    try {
+      await knex("product_lot")
+        .where("product_lot_id", productLotId)
+        .andWhere("is_active", 1)
+        .decrement("product_lot_qty", quantity);
+    } catch (error) {
+      console.error("Error reducing product lot quantity:", error);
+      throw error;
+    }
+  }
+
   addItemset(newItemset) {
     return knex("itemset").insert(newItemset);
+  }
+
+  addProduct(newProduct) {
+    return knex("product").insert(newProduct);
   }
 
   get_itemset() {
     return knex("itemset").select().where("is_active", 1);
   }
 
-
   addProductItemset(productItemset) {
     return knex("product_itemset").insert(productItemset);
   }
-  
 }
 
 module.exports = new itemsetModel();

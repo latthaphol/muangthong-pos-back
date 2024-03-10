@@ -218,6 +218,7 @@ class productController {
                 discountedTotalAmount,
                 totalAmountWithGlassCost,
                 product_cost,
+                calculatedCost,calculatedCostalu,totalAmountWithAluminumCost,
 
                 userId // เพิ่ม userId จาก frontend
             } = req.body;
@@ -259,7 +260,7 @@ class productController {
 
                     if (productDetails.product_type === 'กระจก') {
                         if (totalAmountWithGlassCost >= lot.product_lot_cost){
-                            unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
+                            unit_price = product.calculatedCost; // Calculated elsewhere.
                             //product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
                             product_cost = lot.product_lot_cost; // Assume same as price or adjust accordingly.
                             }
@@ -269,16 +270,21 @@ class productController {
                             }
     
 
-                    } else if (productDetails.product_type === 'อลูมิเนียม') {
-                        // Pricing logic for aluminum products
-                        unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
-                        product_cost = lot.product_lot_cost; // Assume same as price or adjust accordingly.
-                    } else {
-                        // Default pricing for other categories
-                        unit_price = sale_price;
-                        product_cost = lot.product_lot_cost;
-                    }
-                    await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
+                        } else if (productDetails.product_type === 'อลูมิเนียม') {
+                            // For aluminum, using the calculatedCostalu specific to aluminum.
+                            if (totalAmountWithAluminumCost >= lot.product_lot_cost) {
+                                unit_price = product.calculatedCostalu; // Use calculatedCostalu for aluminum.
+                                product_cost = lot.product_lot_cost;
+                            } else {
+                                unit_price = totalAmountWithAluminumCost; // If total amount with glass cost is less, use it.
+                                product_cost = totalAmountWithAluminumCost;
+                            }
+                        } else {
+                            // Default pricing for other categories
+                            unit_price = sale_price;
+                            product_cost = lot.product_lot_cost;
+                        }
+                                        await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
 
                     // Record lot usage details
                     lotUsageDetails.push({
@@ -370,7 +376,6 @@ class productController {
             .select('*')
             .first();
     }
-
     async getOrderDetails(req, res) {
         try {
           const orders = await knex("order")

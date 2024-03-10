@@ -85,6 +85,48 @@ class structController {
             failed(res, 'Internal Server Error');
         }
     }
+    async update_product_type(req, res) {
+        try {
+            const { product_type_id, product_type } = req.body;
+            let updateData = { product_type };
+    
+            if (req.file) {
+                const { buffer, originalname } = req.file;
+                // Assuming you have a similar method for resizing the image
+                const resizedBuffer = await model.resizeImage(buffer, { width: 100, height: 100 });
+    
+                // Specify the directory path
+                const directoryPath = path.join('static', 'product_type');
+    
+                // Ensure the directory exists
+                if (!fs.existsSync(directoryPath)) {
+                    fs.mkdirSync(directoryPath, { recursive: true });
+                }
+    
+                // Define the new image name and path
+                const imageName = `product_type_${product_type}${path.extname(originalname)}`;
+                const imagePath = path.join(directoryPath, imageName);
+    
+                // Save the resized image
+                fs.writeFileSync(imagePath, resizedBuffer);
+    
+                // Add the image name to the update data
+                updateData.product_type_image = imageName;
+            }
+    
+            if (!product_type_id) {
+                failed(res, 'Product Type ID cannot be blank.');
+                return;
+            }
+    
+            // Assuming this method exists in your model
+            const result = await model.update_product_type(product_type_id, updateData);
+            success(res, result, "Product type updated successfully!");
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
     
     async soft_delete_unit(req, res) {
         try {
