@@ -12,5 +12,6 @@ router.get('/product_type', controller.product_type);
 router.post('/add_product_type', upload.single('image'), controller.add_product_type);
 router.post('/soft-delete-unit', controller.soft_delete_unit);
 router.post('/soft-delete-product-type', controller.soft_delete_product_type);
+router.put('/update_product_type', upload.single('image'), controller.update_product_type);
 
 module.exports = router;

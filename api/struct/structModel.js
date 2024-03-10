@@ -38,6 +38,12 @@ class structModel {
     update_product_img({ product_id, product_type_image }) {
         return knex('product_type').update({ product_type_image }).where({ product_id })
     }
+    update_product_type(productTypeId, updateData) {
+        return knex('product_type')
+            .where({ product_type_id: productTypeId })
+            .update(updateData);
+    }
+    
 }
 
 module.exports = new structModel()
