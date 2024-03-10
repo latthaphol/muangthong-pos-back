@@ -78,6 +78,10 @@ class itemsetModel {
     return knex("product").insert(newProduct);
   }
 
+  additemsetlot(newLotItemset) {
+    return knex("product_lot").insert(newLotItemset);
+  }
+  
   get_itemset() {
     return knex("itemset").select().where("is_active", 1);
   }

@@ -65,7 +65,17 @@ class itemsetController {
                     itemset_id: newItemsetId 
                 };
                 const newProductId = await model.addProduct(newProduct);
-     
+
+                const newLotItemset = {
+                    add_date: new Date(), 
+                    product_lot_cost: object.itemset_price,
+                    product_lot_price: object.itemset_price,
+                    product_lot_qty: object.itemset_qty,
+                    product_id :newProductId
+                };
+                
+                const newLotItemsetID = await model.additemsetlot(newLotItemset);
+
                 const productItemset1 = {
                     product_id: object.itemset_product_1,
                     itemset_id: newItemsetId
@@ -75,7 +85,8 @@ class itemsetController {
                     product_id: object.itemset_product_2,
                     itemset_id: newItemsetId
                 };
-    
+           
+
                 await model.addProductItemset(productItemset1);
                 await model.addProductItemset(productItemset2);
                 const productLotId = await model.getProductLotWithHighestPrice(productItemset1.product_id);
@@ -91,8 +102,6 @@ class itemsetController {
             failed(res, 'Internal Server Error');
         }
     }
-
-
 
     async get_itemset(req, res) {
         try {
