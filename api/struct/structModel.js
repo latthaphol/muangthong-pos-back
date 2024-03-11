@@ -43,6 +43,17 @@ class structModel {
             .where({ product_type_id: productTypeId })
             .update(updateData);
     }
+    async update_unit(unit_id, new_unit) {
+        try {
+            const result = await knex('unit')
+                .where({ unit_id: unit_id })
+                .update({ unit: new_unit }); 
+            return result;
+        } catch (error) {
+            throw new Error('Error updating unit: ' + error.message);
+        }
+    }
+    
     
 }
 
