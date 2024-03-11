@@ -259,67 +259,55 @@ class productModel {
 
 
 
-
-    async get_receipt(order_id) {
-        try {
-            const result = await knex('order')
-                .select(
-                    'order.order_id',
-                    'order.total_amount',
-                    'order.point_use',
-                    'order.order_date',
-                    'order_products.product_id',
-                    'order_products.quantity',
-                    'order_products.unit_price',
-                    'order_products.cost_price',
-                    'order.point',
-                    'product.product_name',
-                    'product.product_detail',
-                    'product.product_image',
-                    'member.member_fname',
-                    'member.member_lname',
-                    'unit.unit' // Assuming there is a 'unit' field in the 'unit' table
-                )
-                .leftJoin('order_products', 'order.order_id', 'order_products.order_id')
-                .leftJoin('product', 'order_products.product_id', 'product.product_id')
-                .leftJoin('member', 'order.member_id', 'member.member_id') // Join with the member table
-                .leftJoin('unit', 'product.unit_id', 'unit.unit_id') // Join with the unit table
-                .where({
-                    'order.order_id': order_id,
-                    'order_products.status': 'success' // Filter by 'success' status
-                });
-
-            // Check if there are no results with 'success' status
+   async get_receiptrefund(order_id) {
+  try {
+    const result = await knex('order')
+      .select(
+        'order.order_id',
+        'order.total_amount',
+        'order.point_use',
+        'order.order_date',
+        knex.raw('SUM(order_products.quantity) AS total_quantity'), // Use SUM for quantity if grouping
+        'order_products.unit_price',
+        'order_products.cost_price',
+        // ... other select statements
+        knex.raw('order_products.order_product_date_refund AS refund_date') // Alias for refunded date
+      )
+      .leftJoin('order_products', 'order.order_id', 'order_products.order_id')
+      .leftJoin('product', 'order_products.product_id', 'product.product_id')
+      .leftJoin('member', 'order.member_id', 'member.member_id')
+      .leftJoin('unit', 'product.unit_id', 'unit.unit_id')
+      .where({
+        'order.order_id': order_id,
+        'order_products.status': 'refund',
+      })
+    //   .groupBy('order_products.order_product_date_refund')
+          
+        
             if (result.length === 0) {
                 throw new Error('ไม่พอข้อมูลสถานะ');
             }
-
-            // Calculate the total amount by summing up the individual amounts for each row
-            let totalAmount = 0;
-            result.forEach((row) => {
-                const unitPrice = parseFloat(row.unit_price) || 0;
-                const quantity = parseInt(row.quantity) || 0;
-                totalAmount += unitPrice * quantity;
-            });
-
+        
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
-                total_amount: totalAmount,
-                point_use: row.point_use || 0,
-                status: row.status || 0, // Assuming status is part of the result
+                total_amount: parseFloat(row.total_amount) || 0,
+                point_use: parseFloat(row.point_use) || 0,
+                status: row.status || "",
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
+                
             }));
-
+        
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
         }
     }
+    
 
     // Inside productModel.js
-    async get_receiptrefund(order_id) {
+    async  get_receiptrefund(order_id) {
         try {
             const result = await knex('order')
                 .select(
@@ -332,30 +320,29 @@ class productModel {
                     'order_products.unit_price',
                     'order_products.cost_price',
                     'order_products.order_product_date',
+                    'order_products.order_product_date_refund', 
                     'order.point',
                     'product.product_name',
                     'product.product_detail',
                     'product.product_image',
                     'member.member_fname',
                     'member.member_lname',
-                    'unit.unit',
-
-                    // Assuming there is a 'unit' field in the 'unit' table
+                    'unit.unit'
                 )
                 .leftJoin('order_products', 'order.order_id', 'order_products.order_id')
                 .leftJoin('product', 'order_products.product_id', 'product.product_id')
-                .leftJoin('member', 'order.member_id', 'member.member_id') // Join with the member table
-                .leftJoin('unit', 'product.unit_id', 'unit.unit_id') // Join with the unit table
+                .leftJoin('member', 'order.member_id', 'member.member_id')
+                .leftJoin('unit', 'product.unit_id', 'unit.unit_id')
                 .where({
                     'order.order_id': order_id,
-                    'order_products.status': 'refund' // Filter by 'success' status
-                });
-
-            // Check if there are no results with 'success' status
+                    'order_products.status': 'refund'
+                })
+                .groupBy('order_products.order_product_date_refund'); // Adding group by clause
+        
             if (result.length === 0) {
                 throw new Error('ไม่พอข้อมูลสถานะ');
             }
-
+        
             // Calculate the total amount by summing up the individual amounts for each row
             let totalAmount = 0;
             result.forEach((row) => {
@@ -363,22 +350,24 @@ class productModel {
                 const quantity = parseInt(row.quantity) || 0;
                 totalAmount += unitPrice * quantity;
             });
-
+        
             // Replace null values with 0 in the result
             const resultWithDefaultValues = result.map((row) => ({
                 ...row,
                 total_amount: totalAmount,
                 point_use: row.point_use || 0,
-                status: row.status || 0, // Assuming status is part of the result
+                status: row.status || 0,
                 member_fname: row.member_fname || "",
                 member_lname: row.member_lname || "",
+                
             }));
-
+        
             return resultWithDefaultValues;
         } catch (error) {
             throw error;
         }
     }
+    
     
     async get_full_product_details_by_product_id(product_id) {
         try {
@@ -542,49 +531,48 @@ class productModel {
             .select('product_id', knex.raw('SUM(product_lot_qty) as total_quantity'))
             .orderBy('product_id', 'asc');
     }
-
     async return_product(order_product_id) {
         try {
             // Find the order product by ID
             const orderProduct = await knex('order_products')
                 .where({ opid: order_product_id })
                 .first();
-
+    
             if (!orderProduct) {
                 throw new Error('Order product not found');
             }
-
+    
             // Check if the order product has already been refunded or returned
             if (orderProduct.status === 'refund' || orderProduct.status === 'returned') {
                 throw new Error('Order product has already been refunded or returned');
             }
-
-            // Update the order product status to 'returned'
+    
+            // Update the order product status to 'refund' and set the refund date
             await knex('order_products')
                 .where({ opid: order_product_id })
-                .update({ status: 'refund' });
-
+                .update({ status: 'refund', order_product_date_refund: knex.fn.now() });
+    
             if (!orderProduct.product_lot_id) {
                 throw new Error('Product lot id not found for this order product');
             }
-
+    
             // Find the corresponding product lot
             const productLot = await knex('product_lot')
                 .where({ product_lot_id: orderProduct.product_lot_id })
                 .first();
-
+    
             if (!productLot) {
                 throw new Error('Product lot not found');
             }
-
+    
             // Calculate the new quantity for the product lot
             const newQuantity = productLot.product_lot_qty + orderProduct.quantity;
-
+    
             // Update the product_lot quantity
             await knex('product_lot')
                 .where({ product_lot_id: orderProduct.product_lot_id })
                 .update({ product_lot_qty: newQuantity });
-
+    
             // Return a success message
             return { success: true, message: 'Product returned successfully to the specific product lot' };
         } catch (error) {
@@ -592,6 +580,7 @@ class productModel {
             throw new Error('Failed to return product');
         }
     }
+    
 
 }
 
