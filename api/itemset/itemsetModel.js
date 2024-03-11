@@ -114,9 +114,9 @@ async updateItemset({ itemset_id, itemset_name, itemset_detail, itemset_price, i
   product_itemset(product_itemset) {
     return knex("product_itemset").insert(product_itemset);
   }
-  get_itemset() {
-    return knex("itemset").select().where("is_active", 1);
-  }
+  // get_itemset() {
+  //   return knex("itemset").select().where("is_active", 1);
+  // }
 
   addProductItemset(productItemset) {
     return knex("product_itemset").insert(productItemset);
@@ -141,7 +141,39 @@ update_product_({product_id, itemset_name, itemset_detail}) {
           product_detail: itemset_detail,
       });
 }
+async  get_itemset() {
+  // อัพเดท is_active เป็น 0 สำหรับ itemset_qty ที่มีค่าน้อยกว่าหรือเท่ากับ 0
+  await knex("itemset").where("itemset_qty", "<=", 0).update("is_active", 0);
 
+  // เลือกข้อมูล itemset ที่ is_active เป็น 1
+  const itemsets = await knex("itemset").select().where("is_active", 1);
+  
+  return itemsets;
+}
+
+async  get_products_with_matching_itemsets() {
+  // รับข้อมูล itemset ที่ผ่านการกรองแล้ว
+  const itemsets = await get_itemset();
+  
+  // สร้าง array ของ itemset_id จาก itemsets
+  const itemsetIds = itemsets.map(itemset => itemset.itemset_id);
+  
+  // เลือกข้อมูล product ที่มี itemset_id ตรงกับ itemsetIds
+  const products = await knex("product").select().whereIn("itemset_id", itemsetIds);
+  
+  return products;
+}
+async deactivateItemset(itemsetId) {
+  try {
+    const result = await knex('itemset')
+      .where('itemset_id', itemsetId)
+      .update({ is_active: 0 });
+    return result === 1; // คืนค่า true ถ้ามีการอัพเดทเรียบร้อย
+  } catch (error) {
+    console.error("Error deactivating itemset in the database:", error);
+    throw error;
+  }
+}
 get_product_lots_by_product_id2(itemset_id,) {
   return knex('product')
       .where({ itemset_id: itemset_id }) 
