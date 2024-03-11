@@ -23,5 +23,7 @@ router.put('/updateitemset/:itemset_id', controller.update_itemset);
 // Other routes
 router.post('/twoproduct', controller.getTwoProduct);
 router.get('', controller.get_itemset);
+router.post('/delete', controller.deactivateItemset);
+router.post('/delete/:itemsetId', controller.deactivateItemset);
 
 module.exports = router;

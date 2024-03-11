@@ -239,12 +239,12 @@ class itemsetController {
             failed(res, 'Internal Server Error');
         }
     }
-
+    
     async get_itemset(req, res) {
         try {
             // เรียกใช้งานโมเดลเพื่อดึงข้อมูลชุดสินค้า
-            let result = await model.get_itemset();
-
+            let result = await model.get_itemset(); // เรียกใช้เมธอดในโมเดล ProductModel
+    
             // 
             success(res, 'Success get itemset data', result);
         } catch (error) {
@@ -253,7 +253,29 @@ class itemsetController {
             failed(res, 'Internal Server Error');
         }
     }
-
+    async deactivateItemset(req, res) {
+        try {
+          const { itemsetId } = req.params;
+          const result = await model.deactivateItemset(itemsetId);
+          if (result) {
+            return res.status(200).json({
+              success: true,
+              message: 'Itemset deactivated successfully'
+            });
+          } else {
+            return res.status(404).json({
+              success: false,
+              message: 'Itemset not found'
+            });
+          }
+        } catch (error) {
+          console.error("Error deactivating itemset:", error);
+          return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error'
+          });
+        }
+      }
 
 }
 
