@@ -379,6 +379,7 @@ class productModel {
             throw error;
         }
     }
+    
     async get_full_product_details_by_product_id(product_id) {
         try {
             // Perform a join operation between the 'product' and 'product_type' tables to get the product details along with its type (category).

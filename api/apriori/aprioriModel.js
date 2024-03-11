@@ -192,28 +192,32 @@ class AprioriModel {
 
         // เพิ่มการสนับสนุนสำหรับรายการสินค้าแต่ละรายการเข้าไปในอาร์เรย์ supports
         Object.entries(itemCounts).forEach(([itemId, count]) => {
-            const supportFraction = `${count}/${totalOrders}`;
             const supportPercentage = ((count / totalOrders) * 100).toFixed(2);
-            supports.push({
-                'item': [parseInt(itemId)],
-                'support fraction': supportFraction,
-                'support percentage': `${supportPercentage} %`,
-                'totalOrders': totalOrders
-            });
+            if (supportPercentage > 50) {
+                const supportFraction = `${count}/${totalOrders}`;
+                supports.push({
+                    'item': [parseInt(itemId)],
+                    'support fraction': supportFraction,
+                    'support percentage': `${supportPercentage} %`,
+                    'totalOrders': totalOrders
+                });
+            }
         });
 
         // เพิ่มการสนับสนุนคู่รายการสินค้าเข้าไปในอาร์เรย์ supports
         Object.keys(pairCounts).forEach(pairKey => {
-            const count = pairCounts[pairKey];
+            const count = pairCounts[pairKey]; //ดึงจำนวนคู่จากpairkey
             const items = pairKey.split('-').map(Number);
-            const supportFraction = `${count}/${totalOrders}`;
             const supportPercentage = ((count / totalOrders) * 100).toFixed(2);
-            supports.push({
-                'item': items,
-                'support fraction': supportFraction,
-                'support percentage': `${supportPercentage} %`,
-                'totalOrders': totalOrders
-            });
+            if (supportPercentage >= 50) {
+                const supportFraction = `${count}/${totalOrders}`;
+                supports.push({
+                    'item': items,
+                    'support fraction': supportFraction,
+                    'support percentage': `${supportPercentage} %`,
+                    'totalOrders': totalOrders
+                });
+            }
         });
 
         return supports;
@@ -222,6 +226,7 @@ class AprioriModel {
         throw error;
     }
 }
+
 
 
  
