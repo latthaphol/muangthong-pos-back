@@ -30,7 +30,22 @@ class structController {
             failed(res, 'Internal Server Error')
         }
     }
-
+    async update_unit(req, res) {
+        try {
+            const { unit_id, new_unit } = req.body;
+            if (unit_id && new_unit) {
+                const result = await model.update_unit(unit_id, new_unit);
+                success(res, result, "Update unit success!");
+            } else {
+                failed(res, 'Unit ID or updated unit data missing.');
+            }
+        } catch (error) {
+            console.log(error);
+            failed(res, 'Internal Server Error');
+        }
+    }
+    
+      
     async product_type(req, res) {
         try {
             const result = await model.product_type()

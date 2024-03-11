@@ -13,5 +13,6 @@ router.post('/add_product_type', upload.single('image'), controller.add_product_
 router.post('/soft-delete-unit', controller.soft_delete_unit);
 router.post('/soft-delete-product-type', controller.soft_delete_product_type);
 router.put('/update_product_type', upload.single('image'), controller.update_product_type);
+router.put('/update_unit', controller.update_unit);
 
 module.exports = router;

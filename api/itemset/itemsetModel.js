@@ -1,6 +1,50 @@
 const knex = require("../../config/database");
 
 class itemsetModel {
+  async update_itemset_img({ itemset_id, image_itemset }) {
+    try {
+        const result = await knex('itemset')
+            .where({ itemset_id })
+            .update({ image_itemset }); 
+        return result; // ผลลัพธ์สามารถเป็นจำนวนแถวที่ได้รับผลกระทบ
+    } catch (error) {
+        console.error("Error updating item set image:", error);
+        throw error; // โยนข้อผิดพลาดเพื่อให้ระบบจัดการ
+    }
+}
+update_product_img({ product_id, product_image }) {
+  return knex('product').update({ product_image }).where({ product_id })
+}
+// update_product_qty(product_lot_id, itemset_qty) {
+//   return knex('product_lot')
+//       .update({ product_lot_qty: itemset_qty })
+//       .where({ product_lot_id: product_lot_id });
+// }
+
+async updateItemset({ itemset_id, itemset_name, itemset_detail, itemset_price, itemset_qty }) {
+  try {
+      await knex('itemset')
+          .where({ itemset_id })
+          .update({
+              itemset_name,
+              itemset_detail,
+              itemset_price,
+              itemset_qty
+          });
+//           update_product_qty(product_id, itemset_qty) {
+//           //หาproduct_id ที่ตรงกับitemset_id  แล้วไปที่ product_lot ต่อเพื่อนำitemset_qty ไปใส่ที่ product_lot_qty: itemset_qty
+//   return knex('product_lot')
+//       .update({ product_lot_qty: itemset_qty })
+//       .where({ product_lot_id: product_lot_id });
+// }
+
+      return true;
+  } catch (error) {
+      console.error("Error updating item set in the database:", error);
+      throw error;
+  }
+}
+
   async getProductDetails(productId) {
     try {
         const result = await knex
@@ -67,6 +111,9 @@ class itemsetModel {
     return knex("product_lot").insert(newLotItemset);
   }
   
+  product_itemset(product_itemset) {
+    return knex("product_itemset").insert(product_itemset);
+  }
   get_itemset() {
     return knex("itemset").select().where("is_active", 1);
   }
@@ -74,6 +121,47 @@ class itemsetModel {
   addProductItemset(productItemset) {
     return knex("product_itemset").insert(productItemset);
   }
+  get_product_id_by_itemset_id(itemset_id) {
+    return knex('product_itemset')
+    .select(
+        'product_id',
+    )
+        .where({ itemset_id: itemset_id}) // Assuming you want to include only active lots
+} 
+  get_product_lots_by_product_id(product_id) {
+  return knex('product_lot')
+      .where({ product_id: product_id, is_active: 1 }) // Assuming you want to include only active lots
+      .orderBy('add_date', 'asc'); // Sort by add_date to prioritize older lots
+}
+update_product_({product_id, itemset_name, itemset_detail}) {
+  return knex('product')
+      .where({ product_id: product_id, is_active: 1 })
+      .update({ 
+          product_name: itemset_name,
+          product_detail: itemset_detail,
+      });
 }
 
-module.exports = new itemsetModel();
+get_product_lots_by_product_id2(itemset_id,) {
+  return knex('product')
+      .where({ itemset_id: itemset_id }) 
+}
+
+update_product_lot_quantity2(product_lot_id, newQuantity) {
+  return knex('product_lot')
+      .where({ product_lot_id: product_lot_id })
+      .update({ product_lot_qty: newQuantity });
+}
+update_product_lot_quantity3(product_lot_id, itemset_qty,itemset_price) {
+  return knex('product_lot')
+      .where({ product_lot_id: product_lot_id })
+      .update({ product_lot_qty: itemset_qty ,
+        product_lot_price:itemset_price});
+}
+
+get_itemset_by_itemset_id(itemset_id) {
+  return knex("itemset").select('itemset_qty',).where({ itemset_id: itemset_id});
+}
+}
+
+module.exports = new itemsetModel()
