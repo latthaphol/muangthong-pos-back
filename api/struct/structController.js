@@ -90,6 +90,7 @@ class structController {
             const { product_type_id, product_type } = req.body;
             let updateData = { product_type };
     
+            // Proceed with image processing only if a file is provided
             if (req.file) {
                 const { buffer, originalname } = req.file;
                 // Assuming you have a similar method for resizing the image
@@ -103,15 +104,16 @@ class structController {
                     fs.mkdirSync(directoryPath, { recursive: true });
                 }
     
-                // Define the new image name and path
-                const imageName = `product_type_${product_type}${path.extname(originalname)}`;
+                // Generate a unique file name to prevent overwriting existing files
+                const timestamp = Date.now(); // Using current timestamp to ensure uniqueness
+                const imageName = `product_type_${product_type_id}_${timestamp}${path.extname(originalname)}`;
                 const imagePath = path.join(directoryPath, imageName);
     
                 // Save the resized image
                 fs.writeFileSync(imagePath, resizedBuffer);
     
-                // Add the image name to the update data
-                updateData.product_type_image = imageName;
+                // Add the image path (relative to your static serving path) to the update data
+                updateData.product_type_image = imageName; // Assuming you want to store just the image name or relative path
             }
     
             if (!product_type_id) {
@@ -127,6 +129,7 @@ class structController {
             failed(res, 'Internal Server Error');
         }
     }
+    
     
     async soft_delete_unit(req, res) {
         try {

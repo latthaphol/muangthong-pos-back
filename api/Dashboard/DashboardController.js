@@ -3,11 +3,28 @@ const { success, failed } = require('../../config/response');
 const { check_field } = require('../../middlewares/utils');
 const knex = require('../../config/database');
 const moment = require('moment');
+const DashboardModel = require('./DashboardModel');
+
+
 
 class DashboardController {
 
 
-
+  async getProductLotQuantities(req, res) {
+    try {
+      const productLotQuantities = await knex('product_lot')
+        .join('product', 'product.product_id', '=', 'product_lot.product_id')
+        .select('product.product_id', 'product.product_name', 'product_lot.product_lot_id', 'product_lot.product_lot_qty')
+        .where('product_lot.is_active', '=', 1)
+        .orderBy('product.product_id', 'asc', 'product_lot.product_lot_id', 'asc');
+      
+      success(res, productLotQuantities, "Product lot quantities");
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+  
 
 
   async getPromotion(req, res) {
@@ -108,22 +125,28 @@ class DashboardController {
 
 
 
-
-  async getTopSellingProducts(req, res) {
+  async  getTopSellingProducts(req, res) {
     try {
         const topSellingProducts = await knex('product')
             .leftJoin('order_products', 'product.product_id', '=', 'order_products.product_id')
             .leftJoin('product_type', 'product.product_type_id', '=', 'product_type.product_type_id')
+            .leftJoin(knex('product_lot')
+                .select('product_id', knex.raw('COALESCE(SUM(product_lot_qty), 0) as Product_Lot_Quantity'))
+                .where('is_active', '=', 1)
+                .groupBy('product_id')
+                .as('product_lots'), 'product.product_id', '=', 'product_lots.product_id')
             .select(
                 'product.product_id as Product_ID',
                 'product.product_name as Product_Name',
                 'product_type.product_type as Product_Type',
                 knex.raw('COALESCE(SUM(order_products.quantity), 0) as Stock'),
-                knex.raw('COALESCE(SUM(order_products.quantity * order_products.unit_price), 0) as Total_Sales')
+                knex.raw('COALESCE(SUM(order_products.quantity * order_products.unit_price), 0) as Total_Sales'),
+                'product_lots.Product_Lot_Quantity'
             )
             .groupBy('product.product_id')
             .orderBy(knex.raw('COALESCE(SUM(order_products.quantity * order_products.unit_price), 0)'), 'desc')
-            .limit(10); // เลื่อนไปท้ายสุด
+            .limit(10);
+
         success(res, topSellingProducts, "Top Selling Products");
     } catch (error) {
         console.error(error);
@@ -167,10 +190,55 @@ class DashboardController {
   }
   
 
+ 
 
-
-
+  async getDailySales(req, res) {
+    try {
+      // Assuming getDailySales is implemented in DashboardModel
+      const dailySales = await DashboardModel.getDailySales();
+      success(res, dailySales, "Daily Sales Data");
+    } catch (error) {
+      console.error(error);
+      failed(res, "Failed to fetch daily sales data", error);
+    }
+  }
+      
+// Method to get weekly sales data
+async getWeeklySales(req, res) {
+  try {
+    const weeklySales = await DashboardModel.getWeeklySales();
+    success(res, weeklySales, "Weekly Sales Data");
+  } catch (error) {
+    console.error(error);
+    failed(res, "Failed to fetch weekly sales data", error);
+  }
 }
+
+// Method to get monthly sales data
+async getMonthlySales(req, res) {
+  try {
+    const monthlySales = await DashboardModel.getMonthlySales();
+    success(res, monthlySales, "Monthly Sales Data");
+  } catch (error) {
+    console.error(error);
+    failed(res, "Failed to fetch monthly sales data", error);
+  }
+}
+async getYearlySales(req, res) {
+  try {
+    const yearlySales = await DashboardModel.getYearlySales();
+    success(res, yearlySales, "Yearly Sales Data");
+  } catch (error) {
+    console.error(error);
+    failed(res, "Failed to fetch yearly sales data", error);
+  }
+}
+
+// Remaining methods...
+}
+
+
+
 
 
 module.exports = new DashboardController() 

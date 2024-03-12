@@ -18,5 +18,10 @@ router.get('/top-selling-products', controller.getTopSellingProducts);
 router.get('/monthly-sales', controller.getMonthlySales);
 router.get('/getordercount', controller.getOrderCount);
 
+router.get('/Dashboard4', controller.getYearlySales);
+
+router.get('/Dashboard6', controller.getDailySales);
+router.get('/Dashboard2', controller.getWeeklySales);
+router.get('/Dashboard', controller.getMonthlySales);
 
 module.exports = router;

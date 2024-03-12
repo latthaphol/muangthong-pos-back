@@ -15,7 +15,7 @@ class productController {
                 failed(res, `Column "${missing}" is missing!`)
             } else {
                 const dbRes = await model.add_product(object)
-                const pid = "P" + String(dbRes[0]).padStart(6, '0');
+                const pid = "PID" + String(dbRes[0]).padStart(6, '0');
                 if (req.file) {
                     const oldPath = `static/product/${req.file.filename}`;
                     const newPath = `static/product/${pid}${path.extname(oldPath)}`;
@@ -218,9 +218,9 @@ class productController {
                 discountedTotalAmount,
                 totalAmountWithGlassCost,
                 product_cost,
-                calculatedCost,calculatedCostalu,totalAmountWithAluminumCost,
+                calculatedCost, calculatedCostalu, totalAmountWithAluminumCost,
                 itemset_id,
-                
+
 
                 userId // เพิ่ม userId จาก frontend
             } = req.body;
@@ -251,11 +251,11 @@ class productController {
 
                 const productLots = await model.get_product_lots_by_product_id(product.product_id);
                 productLots.sort((a, b) => new Date(a.add_date) - new Date(b.add_date));
-                
+
                 const productItemset3 = await model.get_itemset_by_itemset_id(product.itemset_id);
                 console.log(productItemset3.itemset_qty)
-                let id_item_qty=productItemset3.itemset_qty
-                
+                let id_item_qty = productItemset3.itemset_qty
+
                 //productItemset3.sort((a, b) => new Date(a.add_date) - new Date(b.add_date));
 
                 let id_item = product.itemset_id;
@@ -269,35 +269,35 @@ class productController {
                     let unit_price, product_cost;
                     let datasetDetail = productDetails.product_id;
 
-                    if (product.itemset_id = 0){
+                    if (product.itemset_id = 0) {
                         if (productDetails.product_type === 'กระจก') {
-                            if (totalAmountWithGlassCost >= lot.product_lot_cost){
+                            if (totalAmountWithGlassCost >= lot.product_lot_cost) {
                                 unit_price = product.calculatedCost; // Calculated elsewhere.
                                 //product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
                                 product_cost = lot.product_lot_cost; // Assume same as price or adjust accordingly.
-                                }
-                                else {
-                                    unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
-                                    product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
-                                }
-        
-    
-                            } else if (productDetails.product_type === 'อลูมิเนียม') {
-                                // For aluminum, using the calculatedCostalu specific to aluminum.
-                                if (totalAmountWithAluminumCost >= lot.product_lot_cost) {
-                                    unit_price = product.calculatedCostalu; // Use calculatedCostalu for aluminum.
-                                    product_cost = lot.product_lot_cost;
-                                } else {
-                                    unit_price = totalAmountWithAluminumCost; // If total amount with glass cost is less, use it.
-                                    product_cost = totalAmountWithAluminumCost;
-                                }
-                            } else {
-                                // Default pricing for other categories
-                                unit_price = sale_price;
-                                product_cost = lot.product_lot_cost;
                             }
-                                            await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
-    
+                            else {
+                                unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
+                                product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
+                            }
+
+
+                        } else if (productDetails.product_type === 'อลูมิเนียม') {
+                            // For aluminum, using the calculatedCostalu specific to aluminum.
+                            if (totalAmountWithAluminumCost >= lot.product_lot_cost) {
+                                unit_price = product.calculatedCostalu; // Use calculatedCostalu for aluminum.
+                                product_cost = lot.product_lot_cost;
+                            } else {
+                                unit_price = totalAmountWithAluminumCost; // If total amount with glass cost is less, use it.
+                                product_cost = totalAmountWithAluminumCost;
+                            }
+                        } else {
+                            // Default pricing for other categories
+                            unit_price = sale_price;
+                            product_cost = lot.product_lot_cost;
+                        }
+                        await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
+
                         // Record lot usage details
                         lotUsageDetails.push({
                             product_lot_id: lot.product_lot_id,
@@ -306,47 +306,48 @@ class productController {
                             product_cost
                         });
 
-                    }else{
-                        
+                    } else {
+
                         console.log(id_item)
                         for (const itemset of productItemset3) {
-                            
-                            
 
-                        await model.update_itemset_quantity(id_item,itemset.itemset_qty - lotQuantityToUse);}
-                        
+
+
+                            await model.update_itemset_quantity(id_item, itemset.itemset_qty - lotQuantityToUse);
+                        }
+
 
 
 
 
                         if (productDetails.product_type === 'กระจก') {
-                            if (totalAmountWithGlassCost >= lot.product_lot_cost){
+                            if (totalAmountWithGlassCost >= lot.product_lot_cost) {
                                 unit_price = product.calculatedCost; // Calculated elsewhere.
                                 //product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
                                 product_cost = lot.product_lot_cost; // Assume same as price or adjust accordingly.
-                                }
-                                else {
-                                    unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
-                                    product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
-                                }
-        
-    
-                            } else if (productDetails.product_type === 'อลูมิเนียม') {
-                                // For aluminum, using the calculatedCostalu specific to aluminum.
-                                if (totalAmountWithAluminumCost >= lot.product_lot_cost) {
-                                    unit_price = product.calculatedCostalu; // Use calculatedCostalu for aluminum.
-                                    product_cost = lot.product_lot_cost;
-                                } else {
-                                    unit_price = totalAmountWithAluminumCost; // If total amount with glass cost is less, use it.
-                                    product_cost = totalAmountWithAluminumCost;
-                                }
-                            } else {
-                                // Default pricing for other categories
-                                unit_price = sale_price;
-                                product_cost = lot.product_lot_cost;
                             }
-                                            await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
-    
+                            else {
+                                unit_price = totalAmountWithGlassCost; // Calculated elsewhere.
+                                product_cost = totalAmountWithGlassCost; // Assume same as price or adjust accordingly.
+                            }
+
+
+                        } else if (productDetails.product_type === 'อลูมิเนียม') {
+                            // For aluminum, using the calculatedCostalu specific to aluminum.
+                            if (totalAmountWithAluminumCost >= lot.product_lot_cost) {
+                                unit_price = product.calculatedCostalu; // Use calculatedCostalu for aluminum.
+                                product_cost = lot.product_lot_cost;
+                            } else {
+                                unit_price = totalAmountWithAluminumCost; // If total amount with glass cost is less, use it.
+                                product_cost = totalAmountWithAluminumCost;
+                            }
+                        } else {
+                            // Default pricing for other categories
+                            unit_price = sale_price;
+                            product_cost = lot.product_lot_cost;
+                        }
+                        await model.update_product_lot_quantity(lot.product_lot_id, lot.product_lot_qty - lotQuantityToUse);
+
                         // Record lot usage details
                         lotUsageDetails.push({
                             product_lot_id: lot.product_lot_id,
@@ -356,7 +357,7 @@ class productController {
                         });
                     }
 
-                    
+
 
                     // Add stock transaction for this lot
                     await model.add_stock_transaction({
@@ -442,64 +443,64 @@ class productController {
     }
     async getOrderDetails(req, res) {
         try {
-          const orders = await knex("order")
-            .select(
-              "order.order_id",
-              "order.total_amount",
-              "order.status",
-              "order.point_use",
-              "order.order_date",
-              "order_products.product_id",
-              "order_products.status as op_status",
-              "order_products.unit_price",
-              "order_products.cost_price"
-            )
-            .leftJoin("order_products", "order.order_id", "order_products.order_id")
-            .orderBy("order.order_id");
-    
-          const orderDetails = orders.reduce((acc, order) => {
-            const existingOrder = acc.find(
-              (item) => item.order_id === order.order_id
-            );
-            if (existingOrder) {
-              existingOrder.order_products.push({
-                product_id: order.product_id,
-                op_status: order.op_status,
-                unit_price: order.unit_price,
-                cost_price: order.cost_price,
-              });
-              // เพิ่มจำนวนสินค้าของแต่ละรายการสั่งซื้อ
-              existingOrder.total_quantity = existingOrder.order_products.reduce(
-                (total, product) => total + 1,
-                0
-              );
-            } else {
-              acc.push({
-                order_id: order.order_id,
-                total_amount: order.total_amount,
-                total_quantity: 1, // รายการแรกจะมีจำนวนสินค้าเป็น 1 เนื่องจากมีสินค้าใน order
-                status: order.status,
-                point_use: order.point_use,
-                order_date: order.order_date,
-                order_products: [
-                  {
-                    product_id: order.product_id,
-                    op_status: order.op_status,
-                    unit_price: order.unit_price,
-                    cost_price: order.cost_price,
-                  },
-                ],
-              });
-            }
-            return acc;
-          }, []);
-    
-          success(res, orderDetails, "Order Details");
+            const orders = await knex("order")
+                .select(
+                    "order.order_id",
+                    "order.total_amount",
+                    "order.status",
+                    "order.point_use",
+                    "order.order_date",
+                    "order_products.product_id",
+                    "order_products.status as op_status",
+                    "order_products.unit_price",
+                    "order_products.cost_price"
+                )
+                .leftJoin("order_products", "order.order_id", "order_products.order_id")
+                .orderBy("order.order_id");
+
+            const orderDetails = orders.reduce((acc, order) => {
+                const existingOrder = acc.find(
+                    (item) => item.order_id === order.order_id
+                );
+                if (existingOrder) {
+                    existingOrder.order_products.push({
+                        product_id: order.product_id,
+                        op_status: order.op_status,
+                        unit_price: order.unit_price,
+                        cost_price: order.cost_price,
+                    });
+                    // เพิ่มจำนวนสินค้าของแต่ละรายการสั่งซื้อ
+                    existingOrder.total_quantity = existingOrder.order_products.reduce(
+                        (total, product) => total + 1,
+                        0
+                    );
+                } else {
+                    acc.push({
+                        order_id: order.order_id,
+                        total_amount: order.total_amount,
+                        total_quantity: 1, // รายการแรกจะมีจำนวนสินค้าเป็น 1 เนื่องจากมีสินค้าใน order
+                        status: order.status,
+                        point_use: order.point_use,
+                        order_date: order.order_date,
+                        order_products: [
+                            {
+                                product_id: order.product_id,
+                                op_status: order.op_status,
+                                unit_price: order.unit_price,
+                                cost_price: order.cost_price,
+                            },
+                        ],
+                    });
+                }
+                return acc;
+            }, []);
+
+            success(res, orderDetails, "Order Details");
         } catch (error) {
-          console.log(error);
-          failed(res, { error: "Internal Server Error" });
+            console.log(error);
+            failed(res, { error: "Internal Server Error" });
         }
-      }
+    }
     async return_product(req, res) {
         try {
             const { opid } = req.body;

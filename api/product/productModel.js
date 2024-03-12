@@ -53,6 +53,8 @@ class productModel {
                 'p.product_thickness',
                 'p.unit_id',
                 'p.is_active',
+                'p.itemset_id',
+
                 'pt.product_type', 
                 knex.raw('COALESCE(SUM(pl.product_lot_qty), 0) as total_quantity')
             )
@@ -519,6 +521,13 @@ class productModel {
             'itemset_id',
         )
             .where({ product_id: itemset_id}) // Assuming you want to include only active lots
+    } 
+    get_product_id_by_itemset_id(itemset_id) {
+        return knex('product_itemset')
+        .select(
+            'product_id',
+        )
+            .where({ itemset_id: itemset_id}) // Assuming you want to include only active lots
     } 
 
     update_product_lot_quantity(product_lot_id, newQuantity) {
